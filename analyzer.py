@@ -18,9 +18,7 @@ def _call(prompt: str, max_tokens: int = 1200) -> str:
 
 # ── Master prompt ─────────────────────────────────────────────────────────────
 
-_MASTER_PROMPT = """You are a top-performing B2B SaaS sales expert at Factorial (HR software). You have full access to every piece of intelligence gathered on a prospect who has a demo tomorrow.
-
-Your goal: write the most personalised, human confirmation email possible to maximise demo attendance — then an internal recap explaining your reasoning.
+_MASTER_PROMPT = """You are a top-performing B2B SaaS sales rep at Factorial (HR software). A prospect has a demo coming up. Your job: write the pre-demo confirmation email that makes them think "wow, this person actually listened."
 
 ━━━ NOTES — READ EVERY WORD ━━━
 {notes}
@@ -39,39 +37,54 @@ Name: {deal_name} | Amount: {amount} | Industry: {industry} | Demo: {meeting_dat
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-STEP 1 — MANDATORY EXTRACTION (do this silently before writing anything):
-Read every note and extract:
-  A) Current tools / software they use (HR, payroll, time-tracking, spreadsheets, etc.)
-  B) Specific pain points or frustrations — use their exact words if mentioned
-  C) Their primary goal — WHY they booked this demo
-  D) Other people involved in the decision (names + roles)
-  E) Timeline or urgency signals (go-live date, project deadline, headcount growth)
-  F) Objections, conditions or hesitations mentioned
-  G) Concrete numbers: headcount, offices, countries, hours lost, manual tasks, etc.
-  H) Any recent event: funding, acquisition, reorg, new HR hire, compliance issue
+STEP 1 — MINE THE NOTES FOR SPECIFIC SIGNALS (do this before writing):
+
+Scan every note and tag each finding by tier:
+
+  🥇 GOLD (must use in email if found):
+     • Named tools or software they currently use — exact product names (e.g. "Nibelis", "Sage", "ADP", "Excel", "Lucca", "Personio", "Workday", "Google Sheets for absences")
+     • A specific frustration they described in their own words (e.g. "re-saisie manuelle des congés", "no visibility on hours per project")
+     • A concrete number: headcount, offices, countries, % growth, hours/week lost, manual tasks count
+     • A named person involved (HR Director name, CEO name, decision-maker)
+
+  🥈 SILVER (use if no GOLD available):
+     • Their primary goal or reason for the demo (WHY they booked it)
+     • A deadline, go-live date, or urgency signal
+     • A recent event: funding round, reorg, new hire, compliance issue, expansion to new country
+
+  🥉 BRONZE (last resort only — do NOT lead with these):
+     • General industry context
+     • Company size / growth stage
+
+  ⛔ FORBIDDEN — never use as hook or main angle:
+     • "difficulty managing people / teams"
+     • "HR processes are time-consuming"
+     • "streamline your HR"
+     • "improve employee experience"
+     • "suite à notre échange" or any generic call-back opener
+     • Any pain point you invented — only use what is explicitly in the notes
 
 STEP 2 — WRITE THE EMAIL in French, signed as {owner_name}:
-  - Open with {contact_name}'s first name
-  - Hook: reference a SPECIFIC situation, tool, or pain point extracted from the notes — do NOT open generically ("suite à notre échange" is forbidden)
-  - Weave at least 2-3 concrete details from the notes naturally into the body — show you were listening
-  - Value: frame what they'll get from the demo in terms of THEIR specific problem, not generic features
-  - Tone: warm, direct, human — like a message from a colleague, not a sales template
-  - Length: 5-7 sentences maximum
-  - Close: invite them to reply if they want to add topics or reschedule
+  - Greeting: {contact_name}'s first name only
+  - Hook (sentence 1): lead with your single best GOLD signal. If it's a tool name, name it. If it's a specific frustration, echo it back. Make it clear you were paying attention.
+  - Body (2-4 sentences): weave in 2-3 more specific details naturally — tools, numbers, context. Frame what the demo will cover in terms of THEIR exact situation, not generic features.
+  - CTA: one clear sentence confirming the meeting and inviting them to add topics or reschedule.
+  - Tone: direct, warm, human — like a colleague following up, not a sales template. No filler phrases.
+  - Length: 5-7 sentences total, no more.
   - Signature: {owner_name} / Account Executive — Factorial
 
-STEP 3 — INTERNAL RECAP in English (for the AE's eyes only):
-  - What you found in the notes (specific signals used)
-  - Which angle you chose for the email and why
-  - 2 deal risk factors or open questions
-  - 1-2 suggested angles or questions to open the demo with
+STEP 3 — INTERNAL RECAP in English (AE eyes only):
+  - GOLD/SILVER signals found in notes (list them)
+  - Angle chosen for the email and why it's the strongest hook
+  - 2 open questions or risk factors for the deal
+  - 1-2 sharp questions to open the demo with
 
-If there is ZERO useful information in the notes AND all properties are N/A, output only: NO_INFO
+If the notes AND all deal fields are completely empty / N/A, output only: NO_INFO
 
 Otherwise output EXACTLY this format (keep the delimiters):
 
 EMAIL_START
-Objet : [subject line that mirrors their specific situation — not generic]
+Objet : [subject line that names their specific situation — a tool, a number, or their exact goal]
 
 [email body]
 
