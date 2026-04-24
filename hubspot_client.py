@@ -30,13 +30,13 @@ class HubSpotClient:
 
     def get_next_future_deal(self, filter_type: str, filter_value: str) -> dict | None:
         """
-        Devuelve el deal con first_meeting_at más próximo a hoy (futuro).
-        filter_type: "owner" | "market" | "provenance"
+        Devuelve el deal con first_meeting_at más próximo a mañana en adelante.
+        filter_type: "owner" | "market"
         """
-        today_ms = str(_date_to_ms(date.today()))
+        tomorrow_ms = str(_date_to_ms(date.today() + timedelta(days=1)))
 
         base_filters = [
-            {"propertyName": "first_meeting_at", "operator": "GTE", "value": today_ms},
+            {"propertyName": "first_meeting_at", "operator": "GTE", "value": tomorrow_ms},
             {"propertyName": "pipeline", "operator": "EQ", "value": PIPELINE_IDS["partners distribution"]},
             _build_filter(filter_type, filter_value),
         ]
@@ -53,11 +53,11 @@ class HubSpotClient:
         return results[0] if results else None
 
     def get_all_future_deals(self, filter_type: str, filter_value: str) -> list:
-        """Devuelve todos los deals futuros para el filtro dado, ordenados por fecha."""
-        today_ms = str(_date_to_ms(date.today()))
+        """Devuelve todos los deals futuros (desde mañana) para el filtro dado."""
+        tomorrow_ms = str(_date_to_ms(date.today() + timedelta(days=1)))
 
         base_filters = [
-            {"propertyName": "first_meeting_at", "operator": "GTE", "value": today_ms},
+            {"propertyName": "first_meeting_at", "operator": "GTE", "value": tomorrow_ms},
             {"propertyName": "pipeline", "operator": "EQ", "value": PIPELINE_IDS["partners distribution"]},
             _build_filter(filter_type, filter_value),
         ]

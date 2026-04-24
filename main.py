@@ -3,8 +3,8 @@ Uso:
   python main.py --owner 86688154
   python main.py --market France
 
-Busca el deal con first_meeting_at más próximo a hoy para el owner o mercado dado,
-analiza el BANT, genera el mail y lo manda por Slack junto con el recap.
+Busca el deal con first_meeting_at más próximo a mañana para el owner o mercado dado,
+analiza el contexto, genera el mail y lo manda por Slack junto con el recap.
 """
 import argparse
 import os
@@ -37,20 +37,13 @@ def run(filter_type: str, filter_value: str):
     notes   = context["notes"]
     print(f"    {len(notes)} nota(s) encontradas.")
 
-    print("[→] Analizando BANT...")
-    bant = analyzer.analyze_bant(notes)
+    print("[→] Analizando contexto y generando mail...")
+    email, recap = analyzer.analyze_and_generate(context)
 
-    if not bant["has_bant"]:
-        missing = ", ".join(bant["missing"]) or "todos los campos"
-        print(f"[!] Sin BANT suficiente. Faltan: {missing}")
+    if not email:
+        print("[!] Sin información suficiente para generar un mail personalizado.")
         notifier.send_no_bant(deal, context)
         return
-
-    print("[→] Generando mail...")
-    email = analyzer.generate_email(context, bant)
-
-    print("[→] Generando recap de argumentos...")
-    recap = analyzer.generate_recap(context, bant, email)
 
     print("[→] Enviando a Slack...")
     notifier.send_email_and_recap(deal, email, recap)
@@ -58,7 +51,7 @@ def run(filter_type: str, filter_value: str):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Demo prep — HubSpot + Claude + Slack")
+    parser = argparse.ArgumentParser(description="Demo prep — HubSpot + Groq + Slack")
     group  = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--owner",  help="Owner ID numérico de HubSpot (ej: 86688154)")
     group.add_argument("--market", help="Valor del campo Market SAMBA (ej: France)")

@@ -7,7 +7,7 @@ _client = Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
 _MODEL  = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
 
 
-def _call(prompt: str, max_tokens: int = 800) -> str:
+def _call(prompt: str, max_tokens: int = 1200) -> str:
     response = _client.chat.completions.create(
         model=_MODEL,
         max_tokens=max_tokens,
@@ -16,148 +16,105 @@ def _call(prompt: str, max_tokens: int = 800) -> str:
     return response.choices[0].message.content.strip()
 
 
-# ── Prompts ───────────────────────────────────────────────────────────────────
+# ── Master prompt ─────────────────────────────────────────────────────────────
 
-_BANT_PROMPT = """Tu es un analyste commercial B2B expert. Analyse les notes suivantes d'un deal et extrais les informations BANT.
+_MASTER_PROMPT = """Tu es un expert en vente B2B SaaS RH chez Factorial. Tu as accès à toutes les informations disponibles sur un prospect qui a une démo demain.
 
-IMPORTANT : Les notes peuvent utiliser n'importe quel format — emojis, tableaux, labels en français, anglais ou espagnol. Sois flexible :
-- Budget = prix, tarif, PEPM, valeur de l'offre, montant, coût, 💰 valeur recommandée, frais, etc.
-- Authority = décideur, autorité, champion, gérant, DG, DRH, qui valide, 🏆 Champion, 💰 Autorité, etc.
-- Need = besoins, problèmes, douleurs, 💡 Besoins, principales douleurs, outils actuels, etc.
-- Timeline = chronologie, délai, timing, 📆 Chronologie, délai de décision, etc.
+Ton objectif : générer le meilleur email de confirmation possible pour maximiser la présence à la démo, ET un recap interne expliquant tes choix.
 
-Si une information est présente même partiellement, considère ce champ comme rempli.
-HAS_BANT doit être true si AU MOINS 3 des 4 champs ont une information concrète.
+━━━ INFORMATIONS DU DEAL ━━━
+Deal : {deal_name}
+Montant estimé : {amount}
+Secteur : {industry}
+Date de démo : {meeting_date}
 
-Notes :
+━━━ ENTREPRISE ━━━
+Nom : {company_name}
+Secteur : {company_industry}
+Employés : {employees}
+Pays : {country}
+
+━━━ CONTACT PRINCIPAL ━━━
+Nom : {contact_name}
+Titre : {contact_title}
+Email : {contact_email}
+
+━━━ ACCOUNT EXECUTIVE ━━━
+Nom : {owner_name}
+
+━━━ TOUTES LES NOTES DU DEAL ━━━
 {notes}
 
-Réponds exactement dans ce format (une ligne par champ) :
-HAS_BANT: true/false
-BUDGET: [résumé concis ou "non mentionné"]
-AUTHORITY: [résumé concis ou "non mentionné"]
-NEED: [résumé concis ou "non mentionné"]
-TIMELINE: [résumé concis ou "non mentionné"]
-MISSING: [champs BANT absents, séparés par virgule, ou "aucun"]"""
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+INSTRUCTIONS :
 
-_EMAIL_PROMPT = """Tu es un expert en vente B2B SaaS RH. Écris un email de confirmation de démo au nom de {owner_name}, Account Executive chez Factorial.
+1. Analyse TOUTES les informations ci-dessus — notes, propriétés, contexte — même si elles sont partielles, en emojis, en français, anglais ou espagnol.
+2. Extrais les signaux clés : qui décide, quel problème urgent, quel timing, quel budget indicatif, quels outils actuels, quelles objections probables.
+3. S'il n'y a AUCUNE information utile (notes vides ET propriétés vides), réponds uniquement avec : NO_INFO
 
-Contexte du deal (usage interne uniquement — ne jamais citer directement) :
-- Entreprise : {company_name} | Secteur : {industry} | Taille : {employees} collaborateurs
-- Décideur : {contact_name} ({contact_title})
-- Besoins détectés : {need}
-- Autorité : {authority}
-- Timeline : {timeline}
-- Notes : {notes}
+Sinon, génère EXACTEMENT ce format (garde les séparateurs) :
 
-Objectif : que le prospect se présente à la démo qu'il a déjà bookée demain.
+EMAIL_START
+Objet : [objet accrocheur]
 
-Règles :
-- Entièrement en français
-- Voix de {owner_name} : chaleureuse, directe, confiante — pas corporate
-- N'utilise JAMAIS le BANT de façon littérale ("je sais que vous avez X employés...")
-- Objet accrocheur sur une ligne, préfixé par "Objet : "
-- Corps : 4-5 phrases max. Accroche sur leur situation (sans la nommer), ce qu'ils repartiront avec après la démo (résultats, pas features), clôture chaleureuse
-- Avant la signature : une phrase naturelle qui offre de répondre pour couvrir des points supplémentaires, de se réorganiser si l'horaire ne convient plus
-- Signature : {owner_name} / Account Executive — Factorial
-- Pas de bullet points, pas de liste de features. Texte fluide et humain."""
+[corps de l'email en français, 4-5 phrases max, voix de {owner_name}, chaleureux et direct, jamais corporate. Accroche sur leur situation sans la nommer littéralement. Ce qu'ils repartiront avec (résultats, pas features). Une phrase offrant de répondre pour couvrir des points ou se réorganiser si besoin. Signature : {owner_name} / Account Executive — Factorial]
+EMAIL_END
 
-
-_RECAP_PROMPT = """Tu es un assistant commercial. Explique en quelques lignes POURQUOI les arguments de cet email ont été choisis pour ce prospect spécifique.
-
-Email envoyé :
-{email}
-
-Contexte BANT :
-- Budget : {budget}
-- Authority : {authority}
-- Need : {need}
-- Timeline : {timeline}
-
-Entreprise : {company_name} | {industry} | {employees} collaborateurs
-Décideur : {contact_name} ({contact_title})
-
-Rédige un recap court (5-8 lignes max) qui explique :
-1. Ce qu'on sait de ce prospect (sans répéter les données brutes)
-2. Pourquoi ces arguments spécifiques ont été choisis
-3. Le ou les points de risque à surveiller pour ce deal
-
-En español. Directo y accionable."""
+RECAP_START
+[recap en español, 5-8 líneas. Explica: qué sabemos del prospect, por qué esos argumentos específicos, 1-2 puntos de riesgo del deal]
+RECAP_END"""
 
 
 # ── Public functions ──────────────────────────────────────────────────────────
 
-def analyze_bant(notes: list) -> dict:
-    empty = {"has_bant": False, "budget": "non mentionné", "authority": "non mentionné",
-             "need": "non mentionné", "timeline": "non mentionné",
-             "missing": ["Budget", "Authority", "Need", "Timeline"]}
-    if not notes:
-        return empty
-
-    notes_text = "\n\n---\n\n".join(_strip_html(n["body"]) for n in notes)
-    text = _call(_BANT_PROMPT.format(notes=notes_text[:4000]), max_tokens=400)
-
-    result = {}
-    for line in text.splitlines():
-        if ":" in line:
-            k, _, v = line.partition(":")
-            result[k.strip().upper()] = v.strip()
-
-    has_bant = result.get("HAS_BANT", "false").lower() == "true"
-    missing  = [m.strip() for m in result.get("MISSING", "").split(",")
-                if m.strip() and m.strip().lower() != "aucun"]
-    return {
-        "has_bant":  has_bant,
-        "budget":    result.get("BUDGET",    "non mentionné"),
-        "authority": result.get("AUTHORITY", "non mentionné"),
-        "need":      result.get("NEED",      "non mentionné"),
-        "timeline":  result.get("TIMELINE",  "non mentionné"),
-        "missing":   missing,
-    }
-
-
-def generate_email(context: dict, bant: dict) -> str:
+def analyze_and_generate(context: dict) -> tuple[str | None, str | None]:
+    """
+    Recibe el contexto completo del deal y devuelve (email, recap).
+    Retorna (None, None) si no hay suficiente información.
+    """
+    deal    = context.get("deal", {})
+    company = context.get("company", {})
     owner   = context.get("owner", {})
     contact = (context.get("contacts") or [{}])[0]
-    company = context.get("company", {})
-    deal    = context.get("deal", {})
-    notes_text = "\n\n---\n\n".join(_strip_html(n["body"]) for n in context.get("notes", []))
+    notes   = context.get("notes", [])
 
-    return _call(_EMAIL_PROMPT.format(
-        owner_name   = f"{owner.get('firstName','')} {owner.get('lastName','')}".strip() or "Votre Account Executive",
-        company_name = company.get("name") or deal.get("dealname", ""),
-        industry     = deal.get("industry") or company.get("industry", "N/A"),
-        employees    = company.get("numberofemployees", "N/A"),
-        contact_name = f"{contact.get('firstname','')} {contact.get('lastname','')}".strip() or "le prospect",
-        contact_title= contact.get("jobtitle", "N/A"),
-        need         = bant["need"],
-        authority    = bant["authority"],
-        timeline     = bant["timeline"],
-        notes        = notes_text[:3000],
-    ), max_tokens=600)
+    notes_text = "\n\n---\n\n".join(_strip_html(n["body"]) for n in notes) if notes else "(sin notas)"
 
+    prompt = _MASTER_PROMPT.format(
+        deal_name      = deal.get("dealname", "N/A"),
+        amount         = deal.get("amount", "N/A"),
+        industry       = deal.get("industry", "N/A"),
+        meeting_date   = deal.get("first_meeting_at", "N/A"),
+        company_name   = company.get("name", "N/A"),
+        company_industry = company.get("industry", "N/A"),
+        employees      = company.get("numberofemployees", "N/A"),
+        country        = deal.get("country_qobra_samba", company.get("country", "N/A")),
+        contact_name   = f"{contact.get('firstname','')} {contact.get('lastname','')}".strip() or "N/A",
+        contact_title  = contact.get("jobtitle", "N/A"),
+        contact_email  = contact.get("email", "N/A"),
+        owner_name     = f"{owner.get('firstName','')} {owner.get('lastName','')}".strip() or "Votre Account Executive",
+        notes          = notes_text[:5000],
+    )
 
-def generate_recap(context: dict, bant: dict, email: str) -> str:
-    contact = (context.get("contacts") or [{}])[0]
-    company = context.get("company", {})
-    deal    = context.get("deal", {})
+    result = _call(prompt, max_tokens=1200)
 
-    return _call(_RECAP_PROMPT.format(
-        email        = email,
-        budget       = bant["budget"],
-        authority    = bant["authority"],
-        need         = bant["need"],
-        timeline     = bant["timeline"],
-        company_name = company.get("name") or deal.get("dealname", ""),
-        industry     = deal.get("industry") or company.get("industry", "N/A"),
-        employees    = company.get("numberofemployees", "N/A"),
-        contact_name = f"{contact.get('firstname','')} {contact.get('lastname','')}".strip() or "le prospect",
-        contact_title= contact.get("jobtitle", "N/A"),
-    ), max_tokens=400)
+    if "NO_INFO" in result:
+        return None, None
+
+    email = _extract(result, "EMAIL_START", "EMAIL_END")
+    recap = _extract(result, "RECAP_START", "RECAP_END")
+    return email, recap
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _extract(text: str, start: str, end: str) -> str:
+    try:
+        return text.split(start)[1].split(end)[0].strip()
+    except IndexError:
+        return text.strip()
+
 
 def _strip_html(text: str) -> str:
     text = re.sub(r"<[^>]+>", " ", text or "")
