@@ -114,6 +114,18 @@ class HubSpotClient:
         r = self.session.get(f"{HUBSPOT_BASE}/crm/v3/owners/{owner_id}")
         return r.json() if r.ok else {}
 
+    def find_owner_by_name(self, name: str) -> dict | None:
+        """Returns the owner whose full name matches (case-insensitive, partial ok)."""
+        r = self.session.get(f"{HUBSPOT_BASE}/crm/v3/owners", params={"limit": 100})
+        if not r.ok:
+            return None
+        name_lower = name.lower()
+        for o in r.json().get("results", []):
+            full = f"{o.get('firstName', '')} {o.get('lastName', '')}".strip()
+            if full.lower() == name_lower or name_lower in full.lower():
+                return o
+        return None
+
     def get_deal_by_id(self, deal_id: str) -> dict | None:
         r = self.session.get(
             f"{HUBSPOT_BASE}/crm/v3/objects/deals/{deal_id}",

@@ -18,6 +18,17 @@ import notifier
 def run(filter_type: str, filter_value: str):
     hs = HubSpotClient()
 
+    # Resolve owner name → ID if a non-numeric value was passed
+    if filter_type == "owner" and not filter_value.strip().isdigit():
+        print(f"[→] Resolving owner name '{filter_value}'...")
+        owner = hs.find_owner_by_name(filter_value)
+        if not owner:
+            print(f"[!] Owner '{filter_value}' not found in HubSpot.")
+            return
+        filter_value = str(owner["id"])
+        full_name = f"{owner.get('firstName','')} {owner.get('lastName','')}".strip()
+        print(f"[✓] Resolved: {full_name} → ID {filter_value}")
+
     print(f"[→] Buscando deals futuros ({filter_type}={filter_value})...")
     deal = hs.get_next_future_deal(filter_type, filter_value)
 

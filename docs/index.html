@@ -35,16 +35,22 @@
     .mode-card:hover { border-color: #ff4d00; box-shadow: 0 0 0 4px rgba(255,77,0,.08); transform: translateY(-2px); }
     .mode-card.selected { border-color: #ff4d00; box-shadow: 0 0 0 4px rgba(255,77,0,.12); }
 
-    /* ── Market pills ── */
-    .market-pill {
-      cursor: pointer;
+    /* ── Market select ── */
+    .market-select {
       border: 2px solid #e5e7eb;
+      border-radius: 16px;
       background: white;
-      transition: all .15s;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 16px center;
+      background-size: 18px;
+      padding-right: 44px;
+      cursor: pointer;
+      transition: border-color .15s, box-shadow .15s;
     }
-    .market-pill:hover { border-color: #ff4d00; background: #fff5f2; }
-    .market-pill.selected { border-color: #ff4d00; background: #ff4d00; color: white; }
-    .market-pill.selected .mflag { filter: none; }
+    .market-select:focus { border-color: #ff4d00; box-shadow: 0 0 0 3px rgba(255,77,0,.1); outline: none; }
+    .market-select option { font-size: 15px; }
 
     /* ── Deal cards ── */
     .deal-card {
@@ -290,7 +296,15 @@
           <h2 class="text-2xl font-bold text-gray-900 mb-1">Which market?</h2>
           <p class="text-gray-400 text-sm mb-6">Select the country market to search</p>
 
-          <div class="grid grid-cols-3 gap-3" id="market-pills"></div>
+          <select id="market-select" class="market-select w-full px-4 py-3.5 text-sm text-gray-700"
+            onchange="selectMarket(this.value)">
+            <option value="" disabled selected>Select a market...</option>
+          </select>
+
+          <div id="market-selected-box" class="hidden mt-4 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3 flex items-center gap-3">
+            <span id="market-flag" class="text-2xl"></span>
+            <p class="font-semibold text-gray-900 text-sm" id="market-selected-label">—</p>
+          </div>
         </div>
       </div>
 
@@ -403,7 +417,7 @@ let chosenMarket = null;    // string
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
-  renderMarketPills();
+  populateMarketSelect();
   checkTokenWarning();
   document.getElementById('hs-token-input').value = hsToken;
   document.getElementById('gh-token-input').value = ghToken;
@@ -511,19 +525,23 @@ function highlight(text, q) {
   return text.slice(0, i) + `<mark class="bg-orange-100 text-orange-800 rounded">${text.slice(i, i + q.length)}</mark>` + text.slice(i + q.length);
 }
 
-// ── Market pills ──────────────────────────────────────────────────────────────
-function renderMarketPills() {
-  document.getElementById('market-pills').innerHTML = MARKETS.map(m => `
-    <button class="market-pill rounded-2xl p-4 text-center" onclick="selectMarket('${m.value}', this)">
-      <div class="text-3xl mb-1.5">${m.flag}</div>
-      <p class="font-semibold text-gray-900 text-sm">${m.label}</p>
-    </button>`).join('');
+// ── Market dropdown ───────────────────────────────────────────────────────────
+function populateMarketSelect() {
+  const sel = document.getElementById('market-select');
+  MARKETS.forEach(m => {
+    const opt = document.createElement('option');
+    opt.value = m.value;
+    opt.textContent = `${m.flag}  ${m.label}`;
+    sel.appendChild(opt);
+  });
 }
 
-function selectMarket(val, el) {
+function selectMarket(val) {
   chosenMarket = val;
-  document.querySelectorAll('.market-pill').forEach(p => p.classList.remove('selected'));
-  el.classList.add('selected');
+  const market = MARKETS.find(m => m.value === val);
+  document.getElementById('market-selected-box').classList.remove('hidden');
+  document.getElementById('market-flag').textContent = market?.flag || '';
+  document.getElementById('market-selected-label').textContent = market?.label || val;
   document.getElementById('search-btn').disabled = false;
 }
 
@@ -785,7 +803,9 @@ function showAllDone() {
 function resetState() {
   selectedDeal.clear(); deals = []; chosenOwner = null; chosenMarket = null; mode = null;
   document.getElementById('send-bar').classList.add('hidden');
-  document.querySelectorAll('.market-pill').forEach(p => p.classList.remove('selected'));
+  document.getElementById('market-select').value = '';
+  document.getElementById('market-selected-box').classList.add('hidden');
+  clearOwner();
   document.getElementById('search-btn').disabled = true;
 }
 

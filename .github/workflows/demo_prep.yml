@@ -19,7 +19,7 @@ on:
         default: owner
 
       owner_id:
-        description: "Owner ID (if filter_type = owner)"
+        description: "Owner name or ID (if filter_type = owner) — e.g. 'Fanny Haurot' or 86688154"
         required: false
         type: string
         default: ""
