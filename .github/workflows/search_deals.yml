@@ -1,0 +1,50 @@
+name: 🔍 Search Deals
+
+on:
+  workflow_dispatch:
+    inputs:
+      filter_type:
+        description: "Filter by owner or market"
+        required: true
+        type: choice
+        options: [owner, market]
+        default: owner
+      filter_value:
+        description: "Owner name (e.g. 'Fanny Haurot') or market (e.g. 'France')"
+        required: true
+        type: string
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+permissions:
+  contents: write
+
+jobs:
+  search:
+    name: Search HubSpot & save results
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: 📦 Install deps
+        run: pip install -r requirements.txt
+
+      - name: 🔍 Search deals
+        env:
+          HUBSPOT_API_KEY:   ${{ secrets.HUBSPOT_API_KEY }}
+          GITHUB_TOKEN:      ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          python search.py \
+            --filter-type "${{ github.event.inputs.filter_type }}" \
+            --filter-value "${{ github.event.inputs.filter_value }}"
