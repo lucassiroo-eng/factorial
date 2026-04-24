@@ -32,6 +32,9 @@ on:
           - "Próximo (first_meeting_at más cercano a hoy)"
         default: "Próximo (first_meeting_at más cercano a hoy)"
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   run-demo-prep:
     name: "Analizar deal y generar mail"
