@@ -4,13 +4,12 @@ on:
   workflow_dispatch:
     inputs:
       filter_type:
-        description: "¿Filtrar por owner, mercado o provenance?"
+        description: "¿Filtrar por owner o por mercado? (Provenance = Partners Distribution siempre activo)"
         required: true
         type: choice
         options:
           - owner
           - market
-          - provenance
         default: owner
 
       owner_id:
@@ -24,14 +23,6 @@ on:
         required: false
         type: string
         default: ""
-
-      provenance_value:
-        description: "Provenance (si elegiste 'provenance') — ej: Partners Distribution"
-        required: false
-        type: choice
-        options:
-          - Partners Distribution
-        default: Partners Distribution
 
       deal_selection:
         description: "¿Qué deal analizar?"
@@ -82,10 +73,8 @@ jobs:
           TYPE="${{ github.event.inputs.filter_type }}"
           if [ "$TYPE" = "owner" ]; then
             python main.py --owner "${{ github.event.inputs.owner_id }}"
-          elif [ "$TYPE" = "market" ]; then
-            python main.py --market "${{ github.event.inputs.market_value }}"
           else
-            python main.py --provenance "${{ github.event.inputs.provenance_value }}"
+            python main.py --market "${{ github.event.inputs.market_value }}"
           fi
 
       - name: ✅ Resultado

@@ -37,8 +37,9 @@ class HubSpotClient:
 
         base_filters = [
             {"propertyName": "first_meeting_at", "operator": "GTE", "value": today_ms},
+            {"propertyName": "pipeline", "operator": "EQ", "value": PIPELINE_IDS["partners distribution"]},
+            _build_filter(filter_type, filter_value),
         ]
-        base_filters.append(_build_filter(filter_type, filter_value))
 
         payload = {
             "filterGroups": [{"filters": base_filters}],
@@ -57,6 +58,7 @@ class HubSpotClient:
 
         base_filters = [
             {"propertyName": "first_meeting_at", "operator": "GTE", "value": today_ms},
+            {"propertyName": "pipeline", "operator": "EQ", "value": PIPELINE_IDS["partners distribution"]},
             _build_filter(filter_type, filter_value),
         ]
 
