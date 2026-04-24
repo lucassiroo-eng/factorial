@@ -6,29 +6,14 @@ from datetime import date, timedelta
 
 HUBSPOT_BASE = "https://api.hubapi.com"
 
-# ── Property names ────────────────────────────────────────────────────────────
-# Verificados con discover_properties.py — cambiar aquí si difieren en tu portal
+# ── Property names (verificados con discover_properties.py) ───────────────────
 DEAL_PROPS = [
-    "dealname",
-    "amount",
-    "dealstage",
-    "hubspot_owner_id",
-    "industry",           # ← pendiente verificar API name
-    "first_meeting_at",   # ← pendiente verificar API name
+    "dealname", "amount", "dealstage", "hubspot_owner_id",
+    "first_meeting_at", "industry",
+    "market_samba",   # ← pendiente verificar API name exacto
 ]
-
-CONTACT_PROPS = [
-    "firstname",
-    "lastname",
-    "jobtitle",
-    "email",
-]
-
-COMPANY_PROPS = [
-    "name",
-    "industry",           # ← pendiente verificar API name
-    "numberofemployees",
-]
+CONTACT_PROPS = ["firstname", "lastname", "jobtitle", "email"]
+COMPANY_PROPS = ["name", "industry", "numberofemployees"]
 # ─────────────────────────────────────────────────────────────────────────────
 
 
@@ -41,67 +26,100 @@ class HubSpotClient:
             "Content-Type": "application/json",
         })
 
-    # ── Deals ─────────────────────────────────────────────────────────────────
+    # ── Deal search ───────────────────────────────────────────────────────────
 
-    def get_deals_with_meeting_in_range(self, meeting_property: str, from_date: date, to_date: date, extra_filters: list) -> list:
-        start_ms = _date_to_ms(from_date)
-        end_ms   = _date_to_ms(to_date)
+    def get_next_future_deal(self, filter_type: str, filter_value: str) -> dict | None:
+        """
+        Devuelve el deal con first_meeting_at más próximo a hoy (futuro).
+        filter_type: "owner" | "market"
+        filter_value: owner_id numérico | valor del campo market
+        """
+        today_ms = str(_date_to_ms(date.today()))
 
-        filters = [
-            {"propertyName": meeting_property, "operator": "GTE", "value": str(start_ms)},
-            {"propertyName": meeting_property, "operator": "LT",  "value": str(end_ms)},
+        base_filters = [
+            {"propertyName": "first_meeting_at", "operator": "GTE", "value": today_ms},
         ]
-        for f in extra_filters:
-            filters.append({
-                "propertyName": f["property"],
-                "operator":     f["operator"],
-                "value":        str(f["value"]),
+
+        if filter_type == "owner":
+            base_filters.append({
+                "propertyName": "hubspot_owner_id",
+                "operator": "EQ",
+                "value": str(filter_value),
             })
+        elif filter_type == "market":
+            base_filters.append({
+                "propertyName": "market_samba",  # verificar API name
+                "operator": "EQ",
+                "value": str(filter_value),
+            })
+        else:
+            raise ValueError(f"filter_type desconocido: {filter_type}. Usa 'owner' o 'market'.")
 
         payload = {
-            "filterGroups": [{"filters": filters}],
+            "filterGroups": [{"filters": base_filters}],
             "properties": DEAL_PROPS,
-            "limit": 100,
+            "sorts": [{"propertyName": "first_meeting_at", "direction": "ASCENDING"}],
+            "limit": 1,
         }
         resp = self.session.post(f"{HUBSPOT_BASE}/crm/v3/objects/deals/search", json=payload)
         resp.raise_for_status()
-        return resp.json().get("results", [])
+        results = resp.json().get("results", [])
+        return results[0] if results else None
 
-    def get_deals_with_meeting_tomorrow(self, meeting_property: str, extra_filters: list) -> list:
-        tomorrow = date.today() + timedelta(days=1)
-        return self.get_deals_with_meeting_in_range(meeting_property, tomorrow, tomorrow + timedelta(days=1), extra_filters)
+    def get_all_future_deals(self, filter_type: str, filter_value: str) -> list:
+        """Devuelve todos los deals futuros para el filtro dado, ordenados por fecha."""
+        today_ms = str(_date_to_ms(date.today()))
 
-    # ── Contacts & companies ──────────────────────────────────────────────────
+        base_filters = [
+            {"propertyName": "first_meeting_at", "operator": "GTE", "value": today_ms},
+        ]
+        if filter_type == "owner":
+            base_filters.append({"propertyName": "hubspot_owner_id", "operator": "EQ", "value": str(filter_value)})
+        elif filter_type == "market":
+            base_filters.append({"propertyName": "market_samba", "operator": "EQ", "value": str(filter_value)})
+
+        all_deals, after = [], None
+        while True:
+            payload = {
+                "filterGroups": [{"filters": base_filters}],
+                "properties": DEAL_PROPS,
+                "sorts": [{"propertyName": "first_meeting_at", "direction": "ASCENDING"}],
+                "limit": 100,
+            }
+            if after:
+                payload["after"] = after
+            resp = self.session.post(f"{HUBSPOT_BASE}/crm/v3/objects/deals/search", json=payload)
+            resp.raise_for_status()
+            data = resp.json()
+            all_deals.extend(data.get("results", []))
+            after = data.get("paging", {}).get("next", {}).get("after")
+            if not after:
+                break
+        return all_deals
+
+    # ── Associations ──────────────────────────────────────────────────────────
 
     def get_deal_contacts(self, deal_id: str) -> list:
-        resp = self.session.get(
-            f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/contacts"
-        )
+        resp = self.session.get(f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/contacts")
         resp.raise_for_status()
-        contact_ids = [r["toObjectId"] for r in resp.json().get("results", [])]
-
         contacts = []
-        for cid in contact_ids:
-            r = self.session.get(
-                f"{HUBSPOT_BASE}/crm/v3/objects/contacts/{cid}",
+        for r in resp.json().get("results", []):
+            c = self.session.get(
+                f"{HUBSPOT_BASE}/crm/v3/objects/contacts/{r['toObjectId']}",
                 params={"properties": ",".join(CONTACT_PROPS)},
             )
-            if r.ok:
-                contacts.append(r.json().get("properties", {}))
+            if c.ok:
+                contacts.append(c.json().get("properties", {}))
         return contacts
 
     def get_deal_company(self, deal_id: str) -> dict:
-        resp = self.session.get(
-            f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/companies"
-        )
+        resp = self.session.get(f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/companies")
         resp.raise_for_status()
         results = resp.json().get("results", [])
         if not results:
             return {}
-
-        company_id = results[0]["toObjectId"]
         r = self.session.get(
-            f"{HUBSPOT_BASE}/crm/v3/objects/companies/{company_id}",
+            f"{HUBSPOT_BASE}/crm/v3/objects/companies/{results[0]['toObjectId']}",
             params={"properties": ",".join(COMPANY_PROPS)},
         )
         return r.json().get("properties", {}) if r.ok else {}
@@ -112,44 +130,31 @@ class HubSpotClient:
         r = self.session.get(f"{HUBSPOT_BASE}/crm/v3/owners/{owner_id}")
         return r.json() if r.ok else {}
 
-    # ── Notes ─────────────────────────────────────────────────────────────────
-
     def get_deal_notes(self, deal_id: str) -> list:
-        resp = self.session.get(
-            f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/notes"
-        )
+        resp = self.session.get(f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/notes")
         resp.raise_for_status()
-        note_ids = [r["toObjectId"] for r in resp.json().get("results", [])]
-
         notes = []
-        for note_id in note_ids:
-            r = self.session.get(
-                f"{HUBSPOT_BASE}/crm/v3/objects/notes/{note_id}",
+        for r in resp.json().get("results", []):
+            n = self.session.get(
+                f"{HUBSPOT_BASE}/crm/v3/objects/notes/{r['toObjectId']}",
                 params={"properties": "hs_note_body,hs_timestamp"},
             )
-            if r.ok:
-                props = r.json().get("properties", {})
-                body  = props.get("hs_note_body", "").strip()
+            if n.ok:
+                props = n.json().get("properties", {})
+                body  = (props.get("hs_note_body") or "").strip()
                 if body:
-                    notes.append({
-                        "id":        note_id,
-                        "body":      body,
-                        "timestamp": props.get("hs_timestamp"),
-                    })
-
+                    notes.append({"id": r["toObjectId"], "body": body, "timestamp": props.get("hs_timestamp")})
         notes.sort(key=lambda n: n.get("timestamp") or "", reverse=True)
         return notes
 
-    # ── Full deal context (used by analyzer) ──────────────────────────────────
-
-    def get_full_deal_context(self, deal: dict) -> dict:
-        deal_id = deal["id"]
+    def get_full_context(self, deal: dict) -> dict:
+        did = deal["id"]
         return {
             "deal":     deal.get("properties", {}),
-            "contacts": self.get_deal_contacts(deal_id),
-            "company":  self.get_deal_company(deal_id),
-            "owner":    self.get_deal_owner(deal.get("properties", {}).get("hubspot_owner_id")),
-            "notes":    self.get_deal_notes(deal_id),
+            "contacts": self.get_deal_contacts(did),
+            "company":  self.get_deal_company(did),
+            "owner":    self.get_deal_owner(deal.get("properties", {}).get("hubspot_owner_id", "")),
+            "notes":    self.get_deal_notes(did),
         }
 
 

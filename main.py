@@ -1,58 +1,70 @@
+"""
+Uso:
+  python main.py --owner 86688154
+  python main.py --market France
+
+Busca el deal con first_meeting_at más próximo a hoy para el owner o mercado dado,
+analiza el BANT, genera el mail y lo manda por Slack junto con el recap.
+"""
+import argparse
 import os
-import schedule
-import time
-import yaml
 from dotenv import load_dotenv
+
+load_dotenv()
 
 from hubspot_client import HubSpotClient
 import analyzer
 import notifier
 
-load_dotenv()
 
-
-def load_config() -> dict:
-    with open("config.yaml", "r") as f:
-        return yaml.safe_load(f)
-
-
-def run_check():
-    print("[Check] Buscando deals con demo mañana...")
-    config = load_config()
+def run(filter_type: str, filter_value: str):
     hs = HubSpotClient()
 
-    meeting_prop = config["hubspot"]["meeting_date_property"]
-    extra_filters = config["hubspot"].get("deal_filters") or []
-    notification_config = config["notification"]
+    print(f"[→] Buscando deals futuros ({filter_type}={filter_value})...")
+    deal = hs.get_next_future_deal(filter_type, filter_value)
 
-    deals = hs.get_deals_with_meeting_tomorrow(meeting_prop, extra_filters)
-    print(f"[Check] {len(deals)} deal(s) encontrados.")
+    if not deal:
+        print("[!] No hay deals con first_meeting_at futura para este filtro.")
+        return
 
-    for deal in deals:
-        deal_name = deal.get("properties", {}).get("dealname", deal["id"])
-        print(f"  → Procesando: {deal_name}")
+    props   = deal.get("properties", {})
+    name    = props.get("dealname", deal["id"])
+    meeting = props.get("first_meeting_at", "?")
+    print(f"[✓] Deal encontrado: {name} | Demo: {meeting}")
 
-        notes = hs.get_deal_notes(deal["id"])
-        bant = analyzer.analyze_bant(notes)
+    print("[→] Obteniendo contexto completo (contactos, empresa, notas)...")
+    context = hs.get_full_context(deal)
+    notes   = context["notes"]
+    print(f"    {len(notes)} nota(s) encontradas.")
 
-        if not bant["has_bant"]:
-            print(f"    [!] Sin BANT — enviando aviso.")
-            notifier.send_no_bant(deal, notification_config)
-        else:
-            print(f"    [✓] BANT detectado — generando recap.")
-            recap = analyzer.generate_recap(deal, notes, bant)
-            notifier.send_recap(deal, recap, notification_config)
+    print("[→] Analizando BANT...")
+    bant = analyzer.analyze_bant(notes)
 
-    print("[Check] Listo.\n")
+    if not bant["has_bant"]:
+        missing = ", ".join(bant["missing"]) or "todos los campos"
+        print(f"[!] Sin BANT suficiente. Faltan: {missing}")
+        notifier.send_no_bant(deal, context)
+        return
+
+    print("[→] Generando mail...")
+    email = analyzer.generate_email(context, bant)
+
+    print("[→] Generando recap de argumentos...")
+    recap = analyzer.generate_recap(context, bant, email)
+
+    print("[→] Enviando a Slack...")
+    notifier.send_email_and_recap(deal, email, recap)
+    print("[✓] Listo.")
 
 
 if __name__ == "__main__":
-    run_at = load_config().get("scheduler", {}).get("run_at", "09:00")
-    print(f"[Scheduler] Ejecutando check diario a las {run_at}.")
-    print("[Scheduler] Ejecutando check inicial ahora...")
-    run_check()
+    parser = argparse.ArgumentParser(description="Demo prep — HubSpot + Claude + Slack")
+    group  = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("--owner",  help="Owner ID numérico de HubSpot (ej: 86688154)")
+    group.add_argument("--market", help="Valor del campo Market SAMBA (ej: France)")
+    args = parser.parse_args()
 
-    schedule.every().day.at(run_at).do(run_check)
-    while True:
-        schedule.run_pending()
-        time.sleep(30)
+    if args.owner:
+        run("owner", args.owner)
+    else:
+        run("market", args.market)
