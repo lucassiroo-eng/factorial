@@ -114,6 +114,13 @@ class HubSpotClient:
         r = self.session.get(f"{HUBSPOT_BASE}/crm/v3/owners/{owner_id}")
         return r.json() if r.ok else {}
 
+    def get_deal_by_id(self, deal_id: str) -> dict | None:
+        r = self.session.get(
+            f"{HUBSPOT_BASE}/crm/v3/objects/deals/{deal_id}",
+            params={"properties": ",".join(DEAL_PROPS)},
+        )
+        return r.json() if r.ok else None
+
     def get_deal_notes(self, deal_id: str) -> list:
         resp = self.session.get(f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/notes")
         resp.raise_for_status()

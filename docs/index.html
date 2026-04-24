@@ -5,385 +5,861 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Demo Prep — Factorial</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     * { font-family: 'Inter', sans-serif; }
 
-    .gradient-bg {
-      background: linear-gradient(135deg, #ff4d00 0%, #ff6b35 50%, #ff8c42 100%);
-    }
-    .card {
+    body { background: #f7f7f8; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+
+    /* ── Steps ── */
+    .step { display: none; }
+    .step.active { display: block; }
+
+    /* ── Fade transition ── */
+    .fade-in { animation: fadeIn .25s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ── Mode cards ── */
+    .mode-card {
+      cursor: pointer;
+      border: 2px solid #e5e7eb;
+      transition: border-color .15s, box-shadow .15s, transform .1s;
       background: white;
-      border-radius: 16px;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
     }
-    .toggle-btn {
-      transition: all 0.2s ease;
+    .mode-card:hover { border-color: #ff4d00; box-shadow: 0 0 0 4px rgba(255,77,0,.08); transform: translateY(-2px); }
+    .mode-card.selected { border-color: #ff4d00; box-shadow: 0 0 0 4px rgba(255,77,0,.12); }
+
+    /* ── Market pills ── */
+    .market-pill {
+      cursor: pointer;
+      border: 2px solid #e5e7eb;
+      background: white;
+      transition: all .15s;
     }
-    .toggle-btn.active {
-      background: #ff4d00;
-      color: white;
+    .market-pill:hover { border-color: #ff4d00; background: #fff5f2; }
+    .market-pill.selected { border-color: #ff4d00; background: #ff4d00; color: white; }
+    .market-pill.selected .mflag { filter: none; }
+
+    /* ── Deal cards ── */
+    .deal-card {
+      background: white;
+      border: 2px solid #e5e7eb;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: border-color .15s, box-shadow .15s;
+      user-select: none;
     }
-    .toggle-btn:not(.active) {
-      background: #f3f4f6;
-      color: #6b7280;
+    .deal-card:hover { border-color: #d1d5db; box-shadow: 0 2px 12px rgba(0,0,0,.06); }
+    .deal-card.selected { border-color: #ff4d00; box-shadow: 0 0 0 3px rgba(255,77,0,.1); }
+
+    /* ── Checkbox ── */
+    .deal-checkbox {
+      width: 22px; height: 22px;
+      border: 2px solid #d1d5db;
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all .15s;
+      flex-shrink: 0;
     }
-    .pulse-ring {
-      animation: pulse 1.5s ease-in-out infinite;
+    .deal-card.selected .deal-checkbox {
+      background: #ff4d00; border-color: #ff4d00;
     }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-    .status-bar {
-      transition: width 0.5s ease;
-    }
-    input:focus {
-      outline: none;
-      border-color: #ff4d00;
-      box-shadow: 0 0 0 3px rgba(255, 77, 0, 0.1);
-    }
+
+    /* ── Buttons ── */
     .btn-primary {
       background: #ff4d00;
-      transition: background 0.2s, transform 0.1s;
+      color: white;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 15px;
+      transition: background .15s, transform .1s, box-shadow .15s;
     }
     .btn-primary:hover:not(:disabled) {
-      background: #e04400;
+      background: #e04300;
+      box-shadow: 0 4px 16px rgba(255,77,0,.35);
     }
-    .btn-primary:active:not(:disabled) {
-      transform: scale(0.98);
+    .btn-primary:active:not(:disabled) { transform: scale(.98); }
+    .btn-primary:disabled { background: #fca07a; cursor: not-allowed; }
+
+    .btn-ghost {
+      color: #6b7280;
+      border-radius: 10px;
+      font-weight: 500;
+      font-size: 14px;
+      transition: color .15s, background .15s;
     }
-    .btn-primary:disabled {
-      background: #fca07a;
-      cursor: not-allowed;
+    .btn-ghost:hover { color: #111; background: #f3f4f6; }
+
+    /* ── Owner search ── */
+    .owner-dropdown {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,.1);
+      max-height: 220px;
+      overflow-y: auto;
     }
-    #settings-panel {
-      display: none;
+    .owner-option {
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: background .1s;
+      border-radius: 8px;
     }
-    #settings-panel.open {
-      display: block;
+    .owner-option:hover { background: #f9fafb; }
+    .owner-option.highlighted { background: #fff5f2; }
+
+    /* ── Send progress ── */
+    .send-item { border-radius: 10px; background: white; border: 1.5px solid #e5e7eb; }
+    .send-item.running { border-color: #fb923c; }
+    .send-item.done { border-color: #86efac; background: #f0fdf4; }
+    .send-item.error { border-color: #fca5a5; background: #fef2f2; }
+
+    /* ── Input ── */
+    input[type=text], input[type=password] {
+      outline: none;
+      border: 2px solid #e5e7eb;
+      transition: border-color .15s, box-shadow .15s;
     }
+    input[type=text]:focus, input[type=password]:focus {
+      border-color: #ff4d00;
+      box-shadow: 0 0 0 3px rgba(255,77,0,.1);
+    }
+
+    /* ── Spinner ── */
+    .spinner {
+      width: 20px; height: 20px;
+      border: 2.5px solid rgba(255,77,0,.2);
+      border-top-color: #ff4d00;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Date badge ── */
+    .date-badge {
+      background: #fff5f2;
+      color: #c2410c;
+      border: 1px solid #fed7aa;
+    }
+
+    /* ── Pulse dot ── */
+    .pulse-dot { animation: pulseDot 1.4s ease-in-out infinite; }
+    @keyframes pulseDot { 0%,100% { opacity:1; } 50% { opacity:.3; } }
   </style>
 </head>
-<body class="min-h-screen bg-gray-50">
+<body class="min-h-screen">
 
-  <!-- Header -->
-  <div class="gradient-bg px-6 py-8">
-    <div class="max-w-xl mx-auto">
-      <div class="flex items-center justify-between mb-1">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 bg-white rounded-xl flex items-center justify-center">
-            <span class="text-lg">⚡</span>
-          </div>
-          <div>
-            <h1 class="text-white font-bold text-xl leading-tight">Demo Prep</h1>
-            <p class="text-orange-100 text-xs">Factorial · Partners Distribution</p>
-          </div>
-        </div>
-        <button onclick="toggleSettings()" class="text-white/70 hover:text-white transition-colors p-2 rounded-lg hover:bg-white/10" title="Settings">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
+  <!-- ── Settings overlay ─────────────────────────────── -->
+  <div id="settings-overlay" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 fade-in">
+      <div class="flex items-center justify-between mb-5">
+        <h3 class="font-bold text-gray-900 text-lg">API Keys</h3>
+        <button onclick="closeSettings()" class="text-gray-400 hover:text-gray-600 p-1">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">HubSpot Private App Token</label>
+          <input id="hs-token-input" type="password" placeholder="pat-na1-xxxx..."
+            class="w-full rounded-xl px-4 py-2.5 text-sm bg-gray-50" />
+          <p class="text-xs text-gray-400 mt-1">Needs contacts, companies, deals (read) + notes scopes</p>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">GitHub Personal Access Token</label>
+          <input id="gh-token-input" type="password" placeholder="ghp_xxxx..."
+            class="w-full rounded-xl px-4 py-2.5 text-sm bg-gray-50" />
+          <p class="text-xs text-gray-400 mt-1">Needs <code class="bg-gray-100 px-1 rounded">workflow</code> scope</p>
+        </div>
+      </div>
+
+      <p class="text-xs text-gray-400 mt-4">Tokens are stored in your browser only — never sent anywhere except the respective APIs.</p>
+
+      <button onclick="saveSettings()" class="btn-primary w-full mt-5 py-3">Save & close</button>
     </div>
   </div>
 
-  <div class="max-w-xl mx-auto px-4 -mt-2 pb-10">
-
-    <!-- Settings panel -->
-    <div id="settings-panel" class="card p-5 mb-4 mt-4 border border-orange-100">
-      <p class="text-sm font-semibold text-gray-700 mb-3">GitHub Personal Access Token</p>
-      <p class="text-xs text-gray-500 mb-3">Required to trigger workflows. Stored locally in your browser — never sent anywhere else. Needs <code class="bg-gray-100 px-1 rounded">workflow</code> scope.</p>
-      <div class="flex gap-2">
-        <input id="token-input" type="password" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
-          class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm"
-          value="" />
-        <button onclick="saveToken()" class="btn-primary text-white text-sm font-medium px-4 py-2 rounded-lg">Save</button>
+  <!-- ── Top bar ───────────────────────────────────────── -->
+  <div class="bg-white border-b border-gray-100 sticky top-0 z-40">
+    <div class="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-7 h-7 bg-[#ff4d00] rounded-lg flex items-center justify-center">
+          <span class="text-white text-sm font-bold">F</span>
+        </div>
+        <span class="font-semibold text-gray-900 text-sm">Demo Prep</span>
+        <span class="text-gray-300 text-sm">·</span>
+        <span class="text-gray-400 text-xs">Partners Distribution</span>
       </div>
-      <p id="token-status" class="text-xs mt-2 text-gray-400"></p>
+      <button onclick="openSettings()" class="btn-ghost px-3 py-1.5 flex items-center gap-1.5">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Settings
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Main ─────────────────────────────────────────── -->
+  <div class="max-w-2xl mx-auto px-4 pb-16">
+
+    <!-- STEP 0: Landing ─────────────────────────────── -->
+    <div id="step-0" class="step active fade-in">
+      <!-- Hero -->
+      <div class="text-center pt-16 pb-10">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-[#ff4d00] rounded-2xl mb-5 shadow-lg shadow-orange-200">
+          <span class="text-3xl">⚡</span>
+        </div>
+        <h1 class="text-3xl font-bold text-gray-900 mb-3">Demo Prep</h1>
+        <p class="text-gray-500 text-base max-w-sm mx-auto leading-relaxed">
+          Generate personalised pre-demo emails and send them to Slack —<br/>
+          powered by HubSpot context &amp; AI.
+        </p>
+      </div>
+
+      <!-- Mode selection -->
+      <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest text-center mb-4">How do you want to filter?</p>
+      <div class="grid grid-cols-2 gap-4 mb-8">
+        <div class="mode-card rounded-2xl p-6 text-center" onclick="selectMode('owner')">
+          <div class="text-4xl mb-3">👤</div>
+          <p class="font-bold text-gray-900 text-base mb-1">By Owner</p>
+          <p class="text-gray-400 text-xs leading-relaxed">Search demos assigned to a specific Account Executive</p>
+        </div>
+        <div class="mode-card rounded-2xl p-6 text-center" onclick="selectMode('market')">
+          <div class="text-4xl mb-3">🌍</div>
+          <p class="font-bold text-gray-900 text-base mb-1">By Market</p>
+          <p class="text-gray-400 text-xs leading-relaxed">Browse all upcoming demos in a specific country market</p>
+        </div>
+      </div>
+
+      <div id="no-token-warning" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
+        <p class="text-amber-700 text-sm font-medium">⚠️ API keys not configured yet.</p>
+        <button onclick="openSettings()" class="text-amber-600 underline text-sm mt-1">Add them in Settings →</button>
+      </div>
     </div>
 
-    <!-- Main card -->
-    <div class="card p-6 mt-4">
-
-      <!-- Filter toggle -->
-      <p class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Filter by</p>
-      <div class="flex gap-2 mb-5">
-        <button id="btn-owner" onclick="setMode('owner')" class="toggle-btn active flex-1 font-medium text-sm py-2.5 rounded-xl">
-          👤 Owner
+    <!-- STEP 1: Filter config ─────────────────────── -->
+    <div id="step-1" class="step fade-in">
+      <div class="pt-8 pb-4">
+        <button onclick="goTo(0)" class="btn-ghost px-3 py-2 flex items-center gap-2 mb-6 -ml-1">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          Back
         </button>
-        <button id="btn-market" onclick="setMode('market')" class="toggle-btn flex-1 font-medium text-sm py-2.5 rounded-xl">
-          🌍 Market
-        </button>
+
+        <!-- Owner config -->
+        <div id="owner-config" class="hidden">
+          <h2 class="text-2xl font-bold text-gray-900 mb-1">Who's the owner?</h2>
+          <p class="text-gray-400 text-sm mb-6">Type a name to search Account Executives</p>
+
+          <div class="relative">
+            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <input id="owner-search" type="text" placeholder="Search by name..."
+              class="w-full rounded-2xl pl-11 pr-4 py-3.5 text-sm bg-white"
+              autocomplete="off"
+              oninput="filterOwners(this.value)"
+              onfocus="showOwnerDropdown()" />
+            <div id="owner-loading" class="hidden absolute right-4 top-1/2 -translate-y-1/2">
+              <div class="spinner" style="width:16px;height:16px;border-width:2px"></div>
+            </div>
+          </div>
+
+          <div id="owner-dropdown" class="owner-dropdown hidden mt-2 p-1.5"></div>
+
+          <div id="owner-selected-box" class="hidden mt-4 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-9 h-9 bg-[#ff4d00] rounded-full flex items-center justify-center text-white font-bold text-sm" id="owner-avatar">?</div>
+              <div>
+                <p class="font-semibold text-gray-900 text-sm" id="owner-selected-name">—</p>
+                <p class="text-gray-400 text-xs" id="owner-selected-email">—</p>
+              </div>
+            </div>
+            <button onclick="clearOwner()" class="text-gray-400 hover:text-gray-600">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- Market config -->
+        <div id="market-config" class="hidden">
+          <h2 class="text-2xl font-bold text-gray-900 mb-1">Which market?</h2>
+          <p class="text-gray-400 text-sm mb-6">Select the country market to search</p>
+
+          <div class="grid grid-cols-3 gap-3" id="market-pills"></div>
+        </div>
       </div>
 
-      <!-- Owner input -->
-      <div id="owner-input" class="">
-        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Owner ID</label>
-        <input id="owner-id" type="text" placeholder="e.g. 86688154"
-          class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm transition-all"
-          oninput="clearStatus()" />
-        <p class="text-xs text-gray-400 mt-1.5">HubSpot numeric owner ID</p>
-      </div>
-
-      <!-- Market input -->
-      <div id="market-input" class="hidden">
-        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1.5">Market (SAMBA)</label>
-        <input id="market-value" type="text" placeholder="e.g. France, Spain, Italy"
-          class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm transition-all"
-          oninput="clearStatus()" />
-        <p class="text-xs text-gray-400 mt-1.5">Value of the <code class="bg-gray-100 px-1 rounded text-xs">country_qobra_samba</code> property</p>
-      </div>
-
-      <!-- Always-on badge -->
-      <div class="flex items-center gap-2 mt-4 bg-orange-50 rounded-xl px-4 py-2.5">
-        <div class="w-2 h-2 bg-orange-400 rounded-full"></div>
-        <span class="text-xs text-orange-600 font-medium">Partners Distribution pipeline always active</span>
-      </div>
-
-      <!-- Run button -->
-      <button id="run-btn" onclick="triggerWorkflow()"
-        class="btn-primary w-full text-white font-semibold py-3.5 rounded-xl mt-5 text-sm">
-        Generate email &amp; recap →
+      <button id="search-btn" onclick="searchDeals()" disabled
+        class="btn-primary w-full py-4 mt-6 flex items-center justify-center gap-2.5">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+        Find upcoming demos
       </button>
     </div>
 
-    <!-- Status card -->
-    <div id="status-card" class="card p-6 mt-4 hidden">
-      <div class="flex items-center justify-between mb-4">
-        <p class="font-semibold text-gray-800 text-sm">Workflow run</p>
-        <a id="run-link" href="#" target="_blank"
-          class="text-xs text-orange-500 hover:text-orange-600 font-medium flex items-center gap-1">
-          View in GitHub
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-          </svg>
-        </a>
+    <!-- STEP 2: Deals list ───────────────────────── -->
+    <div id="step-2" class="step fade-in">
+      <div class="pt-8">
+        <button onclick="goTo(1)" class="btn-ghost px-3 py-2 flex items-center gap-2 mb-6 -ml-1">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/></svg>
+          Back
+        </button>
+
+        <!-- Loading state -->
+        <div id="deals-loading" class="text-center py-16">
+          <div class="spinner mx-auto mb-4" style="width:32px;height:32px;border-width:3px"></div>
+          <p class="text-gray-500 text-sm">Searching HubSpot...</p>
+        </div>
+
+        <!-- Results -->
+        <div id="deals-content" class="hidden">
+          <div class="flex items-center justify-between mb-5">
+            <div>
+              <h2 class="text-xl font-bold text-gray-900" id="deals-title">Upcoming demos</h2>
+              <p class="text-gray-400 text-sm" id="deals-subtitle"></p>
+            </div>
+            <div id="select-all-btn" class="hidden">
+              <button onclick="toggleSelectAll()" class="btn-ghost px-3 py-1.5 text-xs" id="select-all-label">Select all</button>
+            </div>
+          </div>
+
+          <div id="deals-list" class="space-y-3"></div>
+
+          <div id="no-deals" class="hidden text-center py-12">
+            <div class="text-4xl mb-3">🎉</div>
+            <p class="font-semibold text-gray-700">No upcoming demos found</p>
+            <p class="text-gray-400 text-sm mt-1">No deals with future meeting dates in this filter</p>
+          </div>
+        </div>
       </div>
 
-      <!-- Progress bar -->
-      <div class="bg-gray-100 rounded-full h-1.5 mb-4 overflow-hidden">
-        <div id="progress-bar" class="status-bar h-full bg-orange-400 rounded-full" style="width:0%"></div>
-      </div>
-
-      <!-- Steps -->
-      <div class="space-y-3" id="steps">
-        <div class="step flex items-center gap-3" data-step="queued">
-          <div class="step-icon w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs">1</div>
-          <span class="text-sm text-gray-500">Queued</span>
-        </div>
-        <div class="step flex items-center gap-3" data-step="in_progress">
-          <div class="step-icon w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs">2</div>
-          <span class="text-sm text-gray-500">Running</span>
-        </div>
-        <div class="step flex items-center gap-3" data-step="completed">
-          <div class="step-icon w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs">3</div>
-          <span class="text-sm text-gray-500">Sent to Slack</span>
+      <!-- Sticky send bar -->
+      <div id="send-bar" class="hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-100 p-4 z-30">
+        <div class="max-w-2xl mx-auto">
+          <button id="send-btn" onclick="startSending()"
+            class="btn-primary w-full py-4 flex items-center justify-center gap-2.5">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+            <span id="send-btn-label">Send to Slack</span>
+          </button>
         </div>
       </div>
-
-      <!-- Result message -->
-      <div id="result-msg" class="hidden mt-4 rounded-xl px-4 py-3 text-sm font-medium"></div>
     </div>
 
-  </div>
+    <!-- STEP 3: Sending progress ───────────────── -->
+    <div id="step-3" class="step fade-in">
+      <div class="pt-8 pb-24">
+        <div class="text-center mb-8">
+          <div class="inline-flex items-center justify-center w-14 h-14 bg-orange-50 rounded-2xl mb-4">
+            <span class="text-2xl">📤</span>
+          </div>
+          <h2 class="text-2xl font-bold text-gray-900 mb-1">Sending emails</h2>
+          <p class="text-gray-400 text-sm" id="sending-subtitle">Triggering AI generation for each demo...</p>
+        </div>
 
-  <script>
-    const REPO  = "lucassiroo-eng/factorial";
-    const WF    = "demo_prep.yml";
-    const API   = "https://api.github.com";
+        <div id="sending-list" class="space-y-3"></div>
 
-    let mode         = "owner";
-    let pollInterval = null;
+        <div id="all-done-msg" class="hidden mt-8 bg-green-50 border border-green-200 rounded-2xl p-5 text-center">
+          <div class="text-3xl mb-2">✅</div>
+          <p class="font-bold text-green-800">All done!</p>
+          <p class="text-green-600 text-sm mt-1">Check your Slack DMs — emails are on their way.</p>
+          <button onclick="goTo(0); resetState();" class="btn-primary mt-4 px-6 py-2.5 text-sm">Start over</button>
+        </div>
+      </div>
+    </div>
 
-    // ── Init ──────────────────────────────────────────────────────────────────
-    window.onload = () => {
-      const tok = localStorage.getItem("gh_token");
-      if (tok) {
-        document.getElementById("token-input").value = tok;
-        document.getElementById("token-status").textContent = "✓ Token saved";
-        document.getElementById("token-status").className = "text-xs mt-2 text-green-500";
-      }
-    };
+  </div><!-- /max-w-2xl -->
 
-    // ── Settings ─────────────────────────────────────────────────────────────
-    function toggleSettings() {
-      document.getElementById("settings-panel").classList.toggle("open");
+<script>
+// ── Constants ────────────────────────────────────────────────────────────────
+const HS_BASE    = 'https://api.hubapi.com';
+const PIPELINE   = '11834984';
+const DEAL_PROPS = ['dealname','amount','dealstage','hubspot_owner_id','first_meeting_at','industry','country_qobra_samba'];
+const GH_REPO    = 'lucassiroo-eng/factorial';
+const GH_WF      = 'demo_prep.yml';
+
+const MARKETS = [
+  { value: 'Spain',    label: 'Spain',    flag: '🇪🇸' },
+  { value: 'Portugal', label: 'Portugal', flag: '🇵🇹' },
+  { value: 'France',   label: 'France',   flag: '🇫🇷' },
+  { value: 'Germany',  label: 'Germany',  flag: '🇩🇪' },
+  { value: 'Italy',    label: 'Italy',    flag: '🇮🇹' },
+  { value: 'ROW',      label: 'ROW',      flag: '🌐' },
+];
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let hsToken      = localStorage.getItem('hs_token')  || '';
+let ghToken      = localStorage.getItem('gh_token')  || '';
+let allOwners    = [];      // [{ id, name, email }]
+let ownerMap     = {};      // id → { id, name, email }
+let deals        = [];      // enriched deal objects
+let selectedDeal = new Set();
+let mode         = null;    // 'owner' | 'market'
+let chosenOwner  = null;    // { id, name, email }
+let chosenMarket = null;    // string
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  renderMarketPills();
+  checkTokenWarning();
+  document.getElementById('hs-token-input').value = hsToken;
+  document.getElementById('gh-token-input').value = ghToken;
+});
+
+function checkTokenWarning() {
+  document.getElementById('no-token-warning').classList.toggle('hidden', !!(hsToken && ghToken));
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+function openSettings() { document.getElementById('settings-overlay').classList.remove('hidden'); }
+function closeSettings() { document.getElementById('settings-overlay').classList.add('hidden'); }
+function saveSettings() {
+  hsToken = document.getElementById('hs-token-input').value.trim();
+  ghToken = document.getElementById('gh-token-input').value.trim();
+  localStorage.setItem('hs_token', hsToken);
+  localStorage.setItem('gh_token', ghToken);
+  closeSettings();
+  checkTokenWarning();
+}
+
+// ── Navigation ────────────────────────────────────────────────────────────────
+function goTo(n) {
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(`step-${n}`);
+  el.classList.add('active');
+  el.classList.remove('fade-in');
+  void el.offsetWidth;
+  el.classList.add('fade-in');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ── Mode select ───────────────────────────────────────────────────────────────
+function selectMode(m) {
+  if (!hsToken || !ghToken) { openSettings(); return; }
+  mode = m;
+  document.getElementById('owner-config').classList.toggle('hidden', m !== 'owner');
+  document.getElementById('market-config').classList.toggle('hidden', m !== 'market');
+  if (m === 'owner') loadOwners();
+  goTo(1);
+}
+
+// ── Owner search ──────────────────────────────────────────────────────────────
+async function loadOwners() {
+  if (allOwners.length) return;
+  document.getElementById('owner-loading').classList.remove('hidden');
+  try {
+    const data = await hsGet('/crm/v3/owners?limit=100');
+    allOwners = (data.results || []).map(o => ({
+      id:    String(o.id),
+      name:  `${o.firstName || ''} ${o.lastName || ''}`.trim(),
+      email: o.email || '',
+    }));
+    ownerMap = Object.fromEntries(allOwners.map(o => [o.id, o]));
+  } catch (e) {
+    console.error('Failed to load owners', e);
+  }
+  document.getElementById('owner-loading').classList.add('hidden');
+}
+
+function filterOwners(q) {
+  const box = document.getElementById('owner-dropdown');
+  if (!q.trim()) { box.classList.add('hidden'); return; }
+  const matches = allOwners.filter(o => o.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
+  if (!matches.length) { box.innerHTML = '<p class="text-gray-400 text-sm px-3 py-2">No results</p>'; box.classList.remove('hidden'); return; }
+  box.innerHTML = matches.map(o => `
+    <div class="owner-option" onclick="selectOwner('${o.id}')">
+      <p class="font-medium text-gray-900 text-sm">${highlight(o.name, q)}</p>
+      <p class="text-gray-400 text-xs">${o.email}</p>
+    </div>`).join('');
+  box.classList.remove('hidden');
+}
+
+function showOwnerDropdown() {
+  const q = document.getElementById('owner-search').value;
+  if (q.trim()) filterOwners(q);
+}
+
+function selectOwner(id) {
+  chosenOwner = ownerMap[id];
+  document.getElementById('owner-dropdown').classList.add('hidden');
+  document.getElementById('owner-search').value = '';
+  document.getElementById('owner-selected-box').classList.remove('hidden');
+  document.getElementById('owner-selected-name').textContent = chosenOwner.name;
+  document.getElementById('owner-selected-email').textContent = chosenOwner.email;
+  document.getElementById('owner-avatar').textContent = chosenOwner.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+  document.getElementById('search-btn').disabled = false;
+}
+
+function clearOwner() {
+  chosenOwner = null;
+  document.getElementById('owner-selected-box').classList.add('hidden');
+  document.getElementById('search-btn').disabled = true;
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#owner-search') && !e.target.closest('#owner-dropdown')) {
+    document.getElementById('owner-dropdown')?.classList.add('hidden');
+  }
+});
+
+function highlight(text, q) {
+  const i = text.toLowerCase().indexOf(q.toLowerCase());
+  if (i < 0) return text;
+  return text.slice(0, i) + `<mark class="bg-orange-100 text-orange-800 rounded">${text.slice(i, i + q.length)}</mark>` + text.slice(i + q.length);
+}
+
+// ── Market pills ──────────────────────────────────────────────────────────────
+function renderMarketPills() {
+  document.getElementById('market-pills').innerHTML = MARKETS.map(m => `
+    <button class="market-pill rounded-2xl p-4 text-center" onclick="selectMarket('${m.value}', this)">
+      <div class="text-3xl mb-1.5">${m.flag}</div>
+      <p class="font-semibold text-gray-900 text-sm">${m.label}</p>
+    </button>`).join('');
+}
+
+function selectMarket(val, el) {
+  chosenMarket = val;
+  document.querySelectorAll('.market-pill').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('search-btn').disabled = false;
+}
+
+// ── Deal search ───────────────────────────────────────────────────────────────
+async function searchDeals() {
+  goTo(2);
+  document.getElementById('deals-loading').classList.remove('hidden');
+  document.getElementById('deals-content').classList.add('hidden');
+
+  try {
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1); tomorrow.setHours(0,0,0,0);
+    const tomorrowMs = String(tomorrow.getTime());
+
+    const filters = [
+      { propertyName: 'first_meeting_at', operator: 'GTE', value: tomorrowMs },
+      { propertyName: 'pipeline', operator: 'EQ', value: PIPELINE },
+    ];
+
+    if (mode === 'owner') {
+      filters.push({ propertyName: 'hubspot_owner_id', operator: 'EQ', value: chosenOwner.id });
+    } else {
+      filters.push({ propertyName: 'country_qobra_samba', operator: 'EQ', value: chosenMarket });
     }
 
-    function saveToken() {
-      const v = document.getElementById("token-input").value.trim();
-      if (!v) return;
-      localStorage.setItem("gh_token", v);
-      document.getElementById("token-status").textContent = "✓ Token saved";
-      document.getElementById("token-status").className = "text-xs mt-2 text-green-500";
-      document.getElementById("settings-panel").classList.remove("open");
-    }
+    const data = await hsPost('/crm/v3/objects/deals/search', {
+      filterGroups: [{ filters }],
+      properties: DEAL_PROPS,
+      sorts: [{ propertyName: 'first_meeting_at', direction: 'ASCENDING' }],
+      limit: 100,
+    });
 
-    // ── Mode toggle ───────────────────────────────────────────────────────────
-    function setMode(m) {
-      mode = m;
-      document.getElementById("btn-owner").classList.toggle("active", m === "owner");
-      document.getElementById("btn-market").classList.toggle("active", m === "market");
-      document.getElementById("owner-input").classList.toggle("hidden", m !== "owner");
-      document.getElementById("market-input").classList.toggle("hidden", m !== "market");
-      clearStatus();
-    }
+    deals = (data.results || []).map(d => ({
+      id:       d.id,
+      name:     d.properties?.dealname || `Deal ${d.id}`,
+      date:     d.properties?.first_meeting_at,
+      ownerId:  d.properties?.hubspot_owner_id,
+      market:   d.properties?.country_qobra_samba,
+      amount:   d.properties?.amount,
+      industry: d.properties?.industry,
+    }));
 
-    function clearStatus() {
-      document.getElementById("status-card").classList.add("hidden");
-    }
-
-    // ── Trigger ───────────────────────────────────────────────────────────────
-    async function triggerWorkflow() {
-      const token = localStorage.getItem("gh_token");
-      if (!token) {
-        alert("Please add your GitHub Personal Access Token in settings (⚙️) first.");
-        document.getElementById("settings-panel").classList.add("open");
-        return;
-      }
-
-      const value = mode === "owner"
-        ? document.getElementById("owner-id").value.trim()
-        : document.getElementById("market-value").value.trim();
-
-      if (!value) {
-        const field = mode === "owner" ? "Owner ID" : "Market value";
-        alert(`Please enter a ${field}.`);
-        return;
-      }
-
-      const btn = document.getElementById("run-btn");
-      btn.disabled = true;
-      btn.textContent = "Triggering…";
-
-      const inputs = mode === "owner"
-        ? { filter_type: "owner",  owner_id: value, market_value: "" }
-        : { filter_type: "market", owner_id: "",    market_value: value };
-
+    // Enrich with owner names if we haven't loaded owners yet
+    if (!allOwners.length && deals.length) {
       try {
-        const res = await fetch(`${API}/repos/${REPO}/actions/workflows/${WF}/dispatches`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: "application/vnd.github+json",
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ ref: "main", inputs }),
-        });
-
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.message || `HTTP ${res.status}`);
-        }
-
-        showStatus();
-        await new Promise(r => setTimeout(r, 2500));
-        pollForRun(token);
-
-      } catch (e) {
-        btn.disabled = false;
-        btn.textContent = "Generate email & recap →";
-        alert(`Error: ${e.message}`);
-      }
+        const od = await hsGet('/crm/v3/owners?limit=100');
+        allOwners = (od.results || []).map(o => ({ id: String(o.id), name: `${o.firstName||''} ${o.lastName||''}`.trim(), email: o.email||'' }));
+        ownerMap  = Object.fromEntries(allOwners.map(o => [o.id, o]));
+      } catch (_) {}
     }
 
-    // ── Status display ────────────────────────────────────────────────────────
-    function showStatus() {
-      document.getElementById("status-card").classList.remove("hidden");
-      setStep(null);
-      document.getElementById("result-msg").classList.add("hidden");
-      document.getElementById("run-link").href = `https://github.com/${REPO}/actions`;
-      setProgress(10);
+  } catch (e) {
+    deals = [];
+    showError('HubSpot search failed: ' + e.message);
+  }
+
+  renderDeals();
+}
+
+function renderDeals() {
+  document.getElementById('deals-loading').classList.add('hidden');
+  document.getElementById('deals-content').classList.remove('hidden');
+
+  const filterLabel = mode === 'owner' ? chosenOwner.name : chosenMarket;
+  document.getElementById('deals-title').textContent = deals.length
+    ? `${deals.length} upcoming demo${deals.length > 1 ? 's' : ''}`
+    : 'No demos found';
+  document.getElementById('deals-subtitle').textContent = filterLabel + ' · sorted by date';
+
+  if (!deals.length) {
+    document.getElementById('no-deals').classList.remove('hidden');
+    document.getElementById('deals-list').innerHTML = '';
+    document.getElementById('select-all-btn').classList.add('hidden');
+    return;
+  }
+
+  document.getElementById('no-deals').classList.add('hidden');
+  document.getElementById('select-all-btn').classList.remove('hidden');
+
+  document.getElementById('deals-list').innerHTML = deals.map(d => {
+    const owner = ownerMap[d.ownerId];
+    const ownerName = owner ? owner.name : (d.ownerId ? `ID ${d.ownerId}` : '—');
+    return `
+    <div class="deal-card p-4 flex items-start gap-4" id="deal-${d.id}" onclick="toggleDeal('${d.id}')">
+      <div class="deal-checkbox mt-0.5">
+        <svg class="w-3.5 h-3.5 text-white hidden check-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-start justify-between gap-3">
+          <p class="font-semibold text-gray-900 text-sm leading-tight">${escHtml(d.name)}</p>
+          <span class="date-badge text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap flex-shrink-0">${formatDate(d.date)}</span>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 mt-2">
+          ${ownerTag(ownerName)}
+          ${d.market ? `<span class="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full font-medium">${escHtml(d.market)}</span>` : ''}
+          ${d.industry ? `<span class="bg-blue-50 text-blue-600 text-xs px-2 py-0.5 rounded-full font-medium">${escHtml(d.industry)}</span>` : ''}
+          ${d.amount ? `<span class="bg-green-50 text-green-700 text-xs px-2 py-0.5 rounded-full font-medium">${formatAmount(d.amount)}</span>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  updateSendBar();
+}
+
+function ownerTag(name) {
+  const initials = name.split(' ').filter(Boolean).map(w => w[0]).join('').slice(0,2).toUpperCase();
+  const colors = ['bg-purple-100 text-purple-700', 'bg-pink-100 text-pink-700', 'bg-indigo-100 text-indigo-700', 'bg-teal-100 text-teal-700'];
+  const color = colors[initials.charCodeAt(0) % colors.length];
+  return `<span class="${color} text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1"><span>${initials}</span><span>${escHtml(name)}</span></span>`;
+}
+
+function toggleDeal(id) {
+  if (selectedDeal.has(id)) selectedDeal.delete(id);
+  else selectedDeal.add(id);
+  const card = document.getElementById(`deal-${id}`);
+  card.classList.toggle('selected', selectedDeal.has(id));
+  card.querySelector('.check-icon').classList.toggle('hidden', !selectedDeal.has(id));
+  updateSendBar();
+}
+
+function toggleSelectAll() {
+  const allSelected = selectedDeal.size === deals.length;
+  selectedDeal.clear();
+  if (!allSelected) deals.forEach(d => selectedDeal.add(d.id));
+  deals.forEach(d => {
+    const card = document.getElementById(`deal-${d.id}`);
+    if (card) {
+      card.classList.toggle('selected', !allSelected);
+      card.querySelector('.check-icon').classList.toggle('hidden', allSelected);
     }
+  });
+  document.getElementById('select-all-label').textContent = allSelected ? 'Select all' : 'Deselect all';
+  updateSendBar();
+}
 
-    function setProgress(pct) {
-      document.getElementById("progress-bar").style.width = pct + "%";
-    }
+function updateSendBar() {
+  const n = selectedDeal.size;
+  const bar = document.getElementById('send-bar');
+  bar.classList.toggle('hidden', n === 0);
+  document.getElementById('send-btn-label').textContent =
+    n === 1 ? 'Send to Slack (1 deal)' : `Send to Slack (${n} deals)`;
+  document.getElementById('select-all-label').textContent =
+    selectedDeal.size === deals.length ? 'Deselect all' : 'Select all';
+}
 
-    function setStep(current) {
-      const steps = document.querySelectorAll(".step");
-      const order = ["queued", "in_progress", "completed"];
-      const idx   = order.indexOf(current);
+// ── Send flow ─────────────────────────────────────────────────────────────────
+async function startSending() {
+  if (!ghToken) { openSettings(); return; }
+  const toSend = deals.filter(d => selectedDeal.has(d.id));
+  goTo(3);
+  document.getElementById('all-done-msg').classList.add('hidden');
+  document.getElementById('sending-subtitle').textContent =
+    `Triggering ${toSend.length} workflow run${toSend.length > 1 ? 's' : ''}...`;
 
-      steps.forEach(s => {
-        const name = s.dataset.step;
-        const si   = order.indexOf(name);
-        const icon = s.querySelector(".step-icon");
-        const label = s.querySelector("span");
+  document.getElementById('sending-list').innerHTML = toSend.map(d => `
+    <div class="send-item p-4 flex items-center gap-4" id="send-${d.id}">
+      <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0">
+        <div class="spinner" style="width:16px;height:16px;border-width:2px"></div>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="font-semibold text-gray-900 text-sm truncate">${escHtml(d.name)}</p>
+        <p class="text-gray-400 text-xs status-text">Queuing...</p>
+      </div>
+      <span class="date-badge text-xs font-medium px-2 py-0.5 rounded-lg">${formatDate(d.date)}</span>
+    </div>`).join('');
 
-        if (si < idx) {
-          icon.className = "step-icon w-6 h-6 rounded-full bg-green-100 flex items-center justify-center text-xs text-green-600 font-bold";
-          icon.textContent = "✓";
-          label.className = "text-sm text-green-600 font-medium";
-        } else if (si === idx) {
-          icon.className = "step-icon w-6 h-6 rounded-full bg-orange-100 flex items-center justify-center text-xs pulse-ring";
-          icon.textContent = "●";
-          label.className = "text-sm text-gray-800 font-semibold";
-        } else {
-          icon.className = "step-icon w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-400";
-          icon.textContent = si + 1;
-          label.className = "text-sm text-gray-400";
+  let doneCount = 0;
+
+  for (const deal of toSend) {
+    await triggerWorkflow(deal);
+  }
+
+  // Poll all runs
+  const runIds = {};
+  let attempts = 0;
+
+  const interval = setInterval(async () => {
+    attempts++;
+    if (attempts > 80) { clearInterval(interval); showAllDone(); return; }
+
+    try {
+      const data = await ghGet(`/repos/${GH_REPO}/actions/runs?event=workflow_dispatch&per_page=${toSend.length + 5}`);
+      const runs = data.workflow_runs || [];
+
+      toSend.forEach(deal => {
+        if (runIds[deal.id] === 'done') return;
+        const row = document.getElementById(`send-${deal.id}`);
+        if (!row) return;
+
+        // Match run by created_at proximity (triggered within last 3 min)
+        const cutoff = Date.now() - 3 * 60 * 1000;
+        const matching = runs.find(r =>
+          new Date(r.created_at).getTime() > cutoff &&
+          !Object.values(runIds).includes(r.id)
+        );
+
+        if (!matching) { setStatus(row, 'queued', 'Queued in GitHub Actions...'); return; }
+
+        runIds[deal.id] = matching.id;
+
+        if (matching.status === 'in_progress') {
+          setStatus(row, 'running', 'Generating email & recap...');
+        } else if (matching.status === 'completed') {
+          if (matching.conclusion === 'success') {
+            setStatus(row, 'done', '✓ Sent to Slack');
+            runIds[deal.id] = 'done';
+            doneCount++;
+          } else {
+            setStatus(row, 'error', `✗ ${matching.conclusion}`);
+            runIds[deal.id] = 'done';
+            doneCount++;
+          }
         }
       });
-    }
 
-    // ── Polling ───────────────────────────────────────────────────────────────
-    async function pollForRun(token) {
-      let attempts = 0;
-      setStep("queued");
-      setProgress(25);
+      if (doneCount >= toSend.length) { clearInterval(interval); showAllDone(); }
+    } catch (_) {}
+  }, 3000);
+}
 
-      pollInterval = setInterval(async () => {
-        attempts++;
-        if (attempts > 60) { clearInterval(pollInterval); return; }
+async function triggerWorkflow(deal) {
+  try {
+    const row = document.getElementById(`send-${deal.id}`);
+    setStatus(row, 'queued', 'Triggering...');
+    await ghPost(`/repos/${GH_REPO}/actions/workflows/${GH_WF}/dispatches`, {
+      ref: 'main',
+      inputs: { deal_id: deal.id, filter_type: 'owner', owner_id: '', market_value: '' },
+    });
+    setStatus(row, 'queued', 'Queued ✓');
+  } catch (e) {
+    const row = document.getElementById(`send-${deal.id}`);
+    setStatus(row, 'error', `Failed to trigger: ${e.message}`);
+  }
+  await sleep(600);
+}
 
-        try {
-          const res = await fetch(
-            `${API}/repos/${REPO}/actions/runs?per_page=1&event=workflow_dispatch`,
-            { headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" } }
-          );
-          const data = await res.json();
-          const run  = data.workflow_runs?.[0];
-          if (!run) return;
+function setStatus(row, state, text) {
+  if (!row) return;
+  row.className = `send-item p-4 flex items-center gap-4 ${state}`;
+  row.querySelector('.status-text').textContent = text;
+  const icon = row.querySelector('.w-8');
+  if (state === 'done') {
+    icon.innerHTML = '<svg class="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>';
+    icon.className = 'w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0';
+  } else if (state === 'error') {
+    icon.innerHTML = '<svg class="w-5 h-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
+    icon.className = 'w-8 h-8 rounded-full bg-red-50 flex items-center justify-center flex-shrink-0';
+  } else if (state === 'running') {
+    icon.innerHTML = '<div class="spinner" style="width:16px;height:16px;border-width:2px"></div>';
+    icon.className = 'w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center flex-shrink-0';
+  }
+}
 
-          document.getElementById("run-link").href = run.html_url;
+function showAllDone() {
+  document.getElementById('all-done-msg').classList.remove('hidden');
+  document.getElementById('sending-subtitle').textContent = 'All workflows triggered successfully.';
+}
 
-          const status     = run.status;
-          const conclusion = run.conclusion;
+function resetState() {
+  selectedDeal.clear(); deals = []; chosenOwner = null; chosenMarket = null; mode = null;
+  document.getElementById('send-bar').classList.add('hidden');
+  document.querySelectorAll('.market-pill').forEach(p => p.classList.remove('selected'));
+  document.getElementById('search-btn').disabled = true;
+}
 
-          if (status === "queued") {
-            setStep("queued");
-            setProgress(25);
-          } else if (status === "in_progress") {
-            setStep("in_progress");
-            setProgress(65);
-          } else if (status === "completed") {
-            clearInterval(pollInterval);
-            setStep("completed");
-            setProgress(100);
+// ── API helpers ───────────────────────────────────────────────────────────────
+async function hsGet(path) {
+  const r = await fetch(HS_BASE + path, {
+    headers: { Authorization: `Bearer ${hsToken}` },
+  });
+  if (!r.ok) { const t = await r.text(); throw new Error(t); }
+  return r.json();
+}
 
-            const btn = document.getElementById("run-btn");
-            btn.disabled = false;
-            btn.textContent = "Generate email & recap →";
+async function hsPost(path, body) {
+  const r = await fetch(HS_BASE + path, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${hsToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) { const t = await r.text(); throw new Error(t); }
+  return r.json();
+}
 
-            const msg = document.getElementById("result-msg");
-            msg.classList.remove("hidden");
+async function ghGet(path) {
+  const r = await fetch('https://api.github.com' + path, {
+    headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' },
+  });
+  if (!r.ok) { const t = await r.text(); throw new Error(t); }
+  return r.json();
+}
 
-            if (conclusion === "success") {
-              msg.className = "mt-4 rounded-xl px-4 py-3 text-sm font-medium bg-green-50 text-green-700";
-              msg.textContent = "✓ Email & recap sent to Slack!";
-            } else {
-              msg.className = "mt-4 rounded-xl px-4 py-3 text-sm font-medium bg-red-50 text-red-700";
-              msg.textContent = `✗ Run ${conclusion}. Check GitHub Actions for details.`;
-            }
-          }
-        } catch (_) {}
-      }, 3000);
-    }
-  </script>
+async function ghPost(path, body) {
+  const r = await fetch('https://api.github.com' + path, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) { const t = await r.text(); throw new Error(t); }
+}
+
+// ── Formatters ────────────────────────────────────────────────────────────────
+function formatDate(val) {
+  if (!val) return '—';
+  const d = /^\d{10,}$/.test(val) ? new Date(parseInt(val)) : new Date(val);
+  if (isNaN(d)) return val;
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diff  = Math.round((d.setHours(0,0,0,0) - today) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  if (diff <= 6) return d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+}
+
+function formatAmount(v) {
+  if (!v) return '';
+  const n = parseFloat(v);
+  if (isNaN(n)) return v;
+  return n >= 1000 ? `€${(n/1000).toFixed(0)}k` : `€${n}`;
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showError(msg) {
+  document.getElementById('deals-loading').classList.add('hidden');
+  document.getElementById('deals-content').classList.remove('hidden');
+  document.getElementById('deals-list').innerHTML =
+    `<div class="bg-red-50 border border-red-200 rounded-2xl p-5 text-center">
+       <p class="font-semibold text-red-700">Error</p>
+       <p class="text-red-500 text-sm mt-1">${escHtml(msg)}</p>
+     </div>`;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+</script>
 </body>
 </html>

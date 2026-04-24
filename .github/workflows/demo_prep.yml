@@ -3,9 +3,15 @@ name: 🚀 Demo Prep — Generar mail y recap
 on:
   workflow_dispatch:
     inputs:
+      deal_id:
+        description: "HubSpot Deal ID (used by frontend — leave empty to use filter)"
+        required: false
+        type: string
+        default: ""
+
       filter_type:
-        description: "¿Filtrar por owner o por mercado? (Provenance = Partners Distribution siempre activo)"
-        required: true
+        description: "Filter by owner or market (ignored if deal_id is set)"
+        required: false
         type: choice
         options:
           - owner
@@ -13,24 +19,16 @@ on:
         default: owner
 
       owner_id:
-        description: "Owner ID (si elegiste 'owner') — ej: 86688154 para Fanny Haurot"
+        description: "Owner ID (if filter_type = owner)"
         required: false
         type: string
         default: ""
 
       market_value:
-        description: "Mercado (si elegiste 'market') — ej: France, Spain, Italy"
+        description: "Market value (if filter_type = market) — e.g. France"
         required: false
         type: string
         default: ""
-
-      deal_selection:
-        description: "¿Qué deal analizar?"
-        required: true
-        type: choice
-        options:
-          - "Próximo (first_meeting_at más cercano a hoy)"
-        default: "Próximo (first_meeting_at más cercano a hoy)"
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -56,12 +54,14 @@ jobs:
 
       - name: ✅ Validar inputs
         run: |
+          DEAL_ID="${{ github.event.inputs.deal_id }}"
           TYPE="${{ github.event.inputs.filter_type }}"
-          if [ "$TYPE" = "owner" ] && [ -z "${{ github.event.inputs.owner_id }}" ]; then
-            echo "❌ ERROR: Debes introducir un Owner ID cuando el filtro es 'owner'."; exit 1
-          fi
-          if [ "$TYPE" = "market" ] && [ -z "${{ github.event.inputs.market_value }}" ]; then
-            echo "❌ ERROR: Debes introducir un valor de mercado cuando el filtro es 'market'."; exit 1
+          if [ -n "$DEAL_ID" ]; then
+            echo "✓ Processing deal ID: $DEAL_ID"
+          elif [ "$TYPE" = "owner" ] && [ -z "${{ github.event.inputs.owner_id }}" ]; then
+            echo "❌ ERROR: Owner ID required when filter_type is 'owner'."; exit 1
+          elif [ "$TYPE" = "market" ] && [ -z "${{ github.event.inputs.market_value }}" ]; then
+            echo "❌ ERROR: Market value required when filter_type is 'market'."; exit 1
           fi
 
       - name: 🚀 Ejecutar demo prep
@@ -71,8 +71,11 @@ jobs:
           SLACK_TOKEN:     ${{ secrets.SLACK_TOKEN }}
           SLACK_USER_ID:   ${{ secrets.SLACK_USER_ID }}
         run: |
+          DEAL_ID="${{ github.event.inputs.deal_id }}"
           TYPE="${{ github.event.inputs.filter_type }}"
-          if [ "$TYPE" = "owner" ]; then
+          if [ -n "$DEAL_ID" ]; then
+            python main.py --deal-id "$DEAL_ID"
+          elif [ "$TYPE" = "owner" ]; then
             python main.py --owner "${{ github.event.inputs.owner_id }}"
           else
             python main.py --market "${{ github.event.inputs.market_value }}"
