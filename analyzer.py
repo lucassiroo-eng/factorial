@@ -14,32 +14,45 @@ def _call(prompt: str, max_tokens: int = 800) -> str:
         "messages": [{"role": "user", "content": prompt}],
     }
 
-    # Combinaciones (url, headers) a intentar en orden
+    # Base sin el /anthropic sufijo para intentar rutas alternativas
+    base_root = _AZURE_ENDPOINT.rstrip("/").replace("/anthropic", "")
+
+    # Combinaciones (url, headers, params, body_override) a intentar en orden
     attempts = [
-        # 1. Azure AI Foundry — sin api-version
+        # 1-4: Anthropic native format con distintos headers
+        (f"{base}/v1/messages",
+         {"api-key": _AZURE_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"}, {}, None),
         (f"{base}/v1/messages",
          {"api-key": _AZURE_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-         {}),
-        # 2. Azure AI Foundry — con api-version
+         {"api-version": "2024-10-01-preview"}, None),
         (f"{base}/v1/messages",
-         {"api-key": _AZURE_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-         {"api-version": "2024-10-01-preview"}),
-        # 3. Azure Cognitive Services key header
+         {"Ocp-Apim-Subscription-Key": _AZURE_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"}, {}, None),
         (f"{base}/v1/messages",
-         {"Ocp-Apim-Subscription-Key": _AZURE_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
-         {}),
-        # 4. Bearer token
-        (f"{base}/v1/messages",
-         {"Authorization": f"Bearer {_AZURE_KEY}", "anthropic-version": "2023-06-01", "content-type": "application/json"},
-         {}),
+         {"Authorization": f"Bearer {_AZURE_KEY}", "anthropic-version": "2023-06-01", "content-type": "application/json"}, {}, None),
+        # 5. Azure AI Inference format (chat/completions)
+        (f"{base_root}/models/{_MODEL}/chat/completions",
+         {"api-key": _AZURE_KEY, "content-type": "application/json"},
+         {"api-version": "2024-05-01-preview"},
+         {"model": _MODEL, "max_tokens": max_tokens,
+          "messages": [{"role": "user", "content": prompt}]}),
+        # 6. Deployment en la ruta con formato Anthropic
+        (f"{base}/deployments/{_MODEL}/v1/messages",
+         {"api-key": _AZURE_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"}, {}, None),
     ]
 
     last_error = None
-    for url, headers, params in attempts:
-        resp = requests.post(url, headers=headers, params=params, json=body, timeout=60)
-        print(f"  [debug] {list(headers.keys())[0]} → {resp.status_code}")
+    for url, headers, params, body_override in attempts:
+        actual_body = body_override or body
+        resp = requests.post(url, headers=headers, params=params, json=actual_body, timeout=60)
+        print(f"  [debug] {url.split('services.ai.azure.com')[1][:40]} | {list(headers.keys())[0]} → {resp.status_code}")
         if resp.ok:
-            return resp.json()["content"][0]["text"].strip()
+            data = resp.json()
+            # Anthropic format
+            if "content" in data:
+                return data["content"][0]["text"].strip()
+            # OpenAI/Inference format
+            if "choices" in data:
+                return data["choices"][0]["message"]["content"].strip()
         last_error = f"[{resp.status_code}] {resp.text[:200]}"
 
     raise RuntimeError(f"Azure Anthropic — todos los formatos fallaron. Último error: {last_error}")
