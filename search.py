@@ -30,37 +30,41 @@ def main():
     filter_type  = args.filter_type
     filter_value = args.filter_value
 
-    # Resolve owner name → ID
+    # Resolve owner name → ID (also loads all owners into a dict we reuse below)
+    all_owners: dict = {}
     if filter_type == "owner" and not filter_value.strip().isdigit():
         print(f"[→] Resolving owner '{filter_value}'...")
-        owner = hs.find_owner_by_name(filter_value)
-        if not owner:
+        all_owners = hs.get_all_owners()
+        matched_id = next(
+            (oid for oid, name in all_owners.items() if filter_value.lower() in name.lower()),
+            None,
+        )
+        if not matched_id:
             _save({"deals": [], "error": f"Owner '{filter_value}' not found in HubSpot.", "ts": int(time.time())})
-            print(f"[!] Owner not found.")
+            print("[!] Owner not found.")
             return
-        filter_value = str(owner["id"])
-        print(f"[✓] {owner.get('firstName','')} {owner.get('lastName','')} → ID {filter_value}")
+        filter_value = matched_id
+        print(f"[✓] {all_owners[matched_id]} → ID {filter_value}")
+
+    # Fetch all owners in one call (skip if already loaded above)
+    if not all_owners:
+        print("[→] Fetching owners...")
+        all_owners = hs.get_all_owners()
+        print(f"[✓] {len(all_owners)} owner(s) loaded.")
 
     print(f"[→] Searching deals ({filter_type}={filter_value})...")
     raw_deals = hs.get_all_future_deals(filter_type, filter_value)
     print(f"[✓] {len(raw_deals)} deal(s) found.")
 
-    owner_cache: dict = {}
     results = []
-
     for d in raw_deals:
         props    = d.get("properties", {})
-        owner_id = props.get("hubspot_owner_id", "")
-
-        if owner_id and owner_id not in owner_cache:
-            o = hs.get_deal_owner(owner_id)
-            owner_cache[owner_id] = f"{o.get('firstName','')} {o.get('lastName','')}".strip()
-
+        owner_id = props.get("hubspot_owner_id", "") or ""
         results.append({
             "id":       d["id"],
             "name":     props.get("dealname", ""),
             "date":     props.get("first_meeting_at", ""),
-            "owner":    owner_cache.get(owner_id, ""),
+            "owner":    all_owners.get(owner_id, ""),
             "market":   props.get("country_qobra_samba", ""),
             "amount":   props.get("amount", ""),
             "industry": props.get("industry", ""),

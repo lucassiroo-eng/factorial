@@ -133,20 +133,44 @@ class HubSpotClient:
         )
         return r.json() if r.ok else None
 
+    def get_all_owners(self) -> dict:
+        """Returns {owner_id: full_name} for all HubSpot owners in one API call."""
+        r = self.session.get(f"{HUBSPOT_BASE}/crm/v3/owners", params={"limit": 100})
+        if not r.ok:
+            return {}
+        return {
+            str(o["id"]): f"{o.get('firstName','')} {o.get('lastName','')}".strip()
+            for o in r.json().get("results", [])
+        }
+
     def get_deal_notes(self, deal_id: str) -> list:
         resp = self.session.get(f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/notes")
         resp.raise_for_status()
+        note_ids = [r["toObjectId"] for r in resp.json().get("results", [])]
+        if not note_ids:
+            return []
+
+        # Batch read all notes in a single API call instead of N sequential calls
+        batch = self.session.post(
+            f"{HUBSPOT_BASE}/crm/v3/objects/notes/batch/read",
+            json={
+                "properties": ["hs_note_body", "hs_timestamp"],
+                "inputs": [{"id": nid} for nid in note_ids],
+            },
+        )
+        if not batch.ok:
+            return []
+
         notes = []
-        for r in resp.json().get("results", []):
-            n = self.session.get(
-                f"{HUBSPOT_BASE}/crm/v3/objects/notes/{r['toObjectId']}",
-                params={"properties": "hs_note_body,hs_timestamp"},
-            )
-            if n.ok:
-                props = n.json().get("properties", {})
-                body  = (props.get("hs_note_body") or "").strip()
-                if body:
-                    notes.append({"id": r["toObjectId"], "body": body, "timestamp": props.get("hs_timestamp")})
+        for result in batch.json().get("results", []):
+            props = result.get("properties", {})
+            body  = (props.get("hs_note_body") or "").strip()
+            if body:
+                notes.append({
+                    "id":        result["id"],
+                    "body":      body,
+                    "timestamp": props.get("hs_timestamp"),
+                })
         notes.sort(key=lambda n: n.get("timestamp") or "", reverse=True)
         return notes
 
