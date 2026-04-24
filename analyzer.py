@@ -62,7 +62,7 @@ Objet : [objet accrocheur]
 EMAIL_END
 
 RECAP_START
-[recap en español, 5-8 líneas. Explica: qué sabemos del prospect, por qué esos argumentos específicos, 1-2 puntos de riesgo del deal]
+[recap in English, 5-8 lines. Explain: what we know about the prospect, why those specific arguments, 1-2 deal risk points]
 RECAP_END"""
 
 
