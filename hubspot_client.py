@@ -137,11 +137,15 @@ class HubSpotClient:
         """Returns {owner_id: full_name} for all HubSpot owners in one API call."""
         r = self.session.get(f"{HUBSPOT_BASE}/crm/v3/owners", params={"limit": 100})
         if not r.ok:
+            print(f"[!] get_all_owners failed: {r.status_code} {r.text[:200]}")
+            print("[!] Make sure the HubSpot token has 'crm.objects.owners.read' scope.")
             return {}
-        return {
-            str(o["id"]): f"{o.get('firstName','')} {o.get('lastName','')}".strip()
-            for o in r.json().get("results", [])
-        }
+        result = {}
+        for o in r.json().get("results", []):
+            name = f"{o.get('firstName') or ''} {o.get('lastName') or ''}".strip()
+            result[str(o["id"])] = name or o.get("email", "")
+        print(f"[✓] Loaded {len(result)} owner(s).")
+        return result
 
     def get_deal_notes(self, deal_id: str) -> list:
         resp = self.session.get(f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/notes")
@@ -155,11 +159,26 @@ class HubSpotClient:
             f"{HUBSPOT_BASE}/crm/v3/objects/notes/batch/read",
             json={
                 "properties": ["hs_note_body", "hs_timestamp"],
-                "inputs": [{"id": nid} for nid in note_ids],
+                "inputs": [{"id": str(nid)} for nid in note_ids],
             },
         )
+
+        # Fallback to sequential reads if batch API fails
         if not batch.ok:
-            return []
+            print(f"[!] Batch notes failed ({batch.status_code}), falling back to sequential reads.")
+            notes = []
+            for nid in note_ids:
+                n = self.session.get(
+                    f"{HUBSPOT_BASE}/crm/v3/objects/notes/{nid}",
+                    params={"properties": "hs_note_body,hs_timestamp"},
+                )
+                if n.ok:
+                    props = n.json().get("properties", {})
+                    body  = (props.get("hs_note_body") or "").strip()
+                    if body:
+                        notes.append({"id": str(nid), "body": body, "timestamp": props.get("hs_timestamp")})
+            notes.sort(key=lambda n: n.get("timestamp") or "", reverse=True)
+            return notes
 
         notes = []
         for result in batch.json().get("results", []):

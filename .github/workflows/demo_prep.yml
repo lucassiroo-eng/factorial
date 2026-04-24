@@ -43,13 +43,13 @@ jobs:
       - name: 📥 Checkout repo
         uses: actions/checkout@v4
 
-      - name: 🐍 Setup uv + Python
-        uses: astral-sh/setup-uv@v4
+      - name: 🐍 Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: 📦 Instalar dependencias
-        run: uv pip install -r requirements.txt --system
+      - name: 📦 Instalar dependencias (uv para velocidad)
+        run: pip install uv && uv pip install -r requirements.txt --system
 
       - name: ✅ Validar inputs
         run: |

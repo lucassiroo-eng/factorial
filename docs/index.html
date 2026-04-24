@@ -88,6 +88,33 @@
     .progress-step.active { border-left-color:#ff4d00; }
     .progress-step.done { border-left-color:#86efac; }
 
+    /* Pacman */
+    .pac-wrap { position:relative; height:48px; overflow:hidden; }
+    .pac-man {
+      position:absolute; left:0;
+      width:44px; height:44px;
+      background:#ff4d00; border-radius:50%;
+      animation: pac-move 2.4s linear infinite, pac-chomp .28s ease-in-out infinite alternate;
+    }
+    @keyframes pac-move {
+      0%   { left:0; }
+      100% { left:calc(100% - 44px); }
+    }
+    @keyframes pac-chomp {
+      from { clip-path: polygon(50% 50%, 100% 20%, 100% 0, 0 0, 0 100%, 100% 100%, 100% 80%); }
+      to   { clip-path: polygon(50% 50%, 100% 48%, 100% 0, 0 0, 0 100%, 100% 100%, 100% 52%); }
+    }
+    .pac-dot {
+      position:absolute; top:50%; transform:translateY(-50%);
+      width:10px; height:10px; background:#ffb347; border-radius:50%;
+      animation: dot-eat 2.4s linear infinite;
+    }
+    @keyframes dot-eat {
+      0%   { opacity:1; transform:translateY(-50%) scale(1); }
+      90%  { opacity:1; transform:translateY(-50%) scale(1); }
+      100% { opacity:0; transform:translateY(-50%) scale(0); }
+    }
+
     .progress-bar-track { background:#f3f4f6; border-radius:99px; overflow:hidden; }
     .progress-bar-fill { height:4px; background:#ff4d00; border-radius:99px; transition:width .4s ease; }
   </style>
@@ -218,10 +245,14 @@
         <!-- Loading -->
         <div id="search-loading" class="hidden">
           <div class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-            <div class="flex items-center gap-3 mb-4">
-              <div class="spinner"></div>
-              <p class="font-semibold text-gray-800 text-sm" id="search-status-text">Triggering search...</p>
+
+            <!-- Pacman -->
+            <div class="pac-wrap mb-1" id="pac-stage">
+              <div class="pac-man"></div>
             </div>
+
+            <p class="font-semibold text-gray-800 text-sm mt-3 mb-3" id="search-status-text">Triggering search...</p>
+
             <div class="progress-bar-track mb-5">
               <div class="progress-bar-fill" id="search-progress" style="width:5%"></div>
             </div>
@@ -239,7 +270,7 @@
                 <p class="text-xs text-gray-500">Saving results</p>
               </div>
             </div>
-            <p class="text-xs text-gray-400 mt-4">This takes about 60–90 seconds.</p>
+            <p class="text-xs text-gray-400 mt-4">This takes about 40–60 seconds.</p>
           </div>
         </div>
 
@@ -604,8 +635,29 @@ function showSearchLoading() {
   document.getElementById('deals-content').classList.add('hidden');
   ['ps-queue','ps-setup','ps-search','ps-save'].forEach(id => {
     document.getElementById(id).className = 'progress-step pl-4 py-1';
+    document.getElementById(id).querySelector('p').className = 'text-xs text-gray-500';
+    document.getElementById(id).querySelector('p').textContent =
+      id === 'ps-queue'  ? 'Queuing workflow' :
+      id === 'ps-setup'  ? 'Setting up environment' :
+      id === 'ps-search' ? 'Searching HubSpot' : 'Saving results';
   });
   setSearchProgress(5, 'Triggering search...');
+  renderPacDots();
+}
+
+function renderPacDots() {
+  const stage = document.getElementById('pac-stage');
+  // Remove old dots
+  stage.querySelectorAll('.pac-dot').forEach(d => d.remove());
+  // Add dots spread across the track
+  const positions = [20, 32, 44, 56, 68, 80];
+  positions.forEach((pct, i) => {
+    const dot = document.createElement('div');
+    dot.className = 'pac-dot';
+    dot.style.left = pct + '%';
+    dot.style.animationDelay = (i * 0.4) + 's';
+    stage.appendChild(dot);
+  });
 }
 
 function setSearchProgress(pct, text) {
