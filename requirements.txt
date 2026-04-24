@@ -1,0 +1,6 @@
+anthropic>=0.25.0
+requests>=2.31.0
+slack-sdk>=3.27.0
+schedule>=1.2.1
+pyyaml>=6.0.1
+python-dotenv>=1.0.0

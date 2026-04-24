@@ -1,0 +1,26 @@
+hubspot:
+  # Nombre exacto de la propiedad en HubSpot (API name, no el label)
+  meeting_date_property: "first_meeting_at"
+  # Filtros adicionales sobre deals (opcional)
+  # Cada filtro: { property, operator, value }
+  # Operators: EQ, NEQ, GT, GTE, LT, LTE, CONTAINS_TOKEN
+  deal_filters: []
+    # Ejemplo:
+    # - property: "pipeline"
+    #   operator: "EQ"
+    #   value: "default"
+    # - property: "dealstage"
+    #   operator: "NEQ"
+    #   value: "closedlost"
+
+notification:
+  # "slack", "email", o "both"
+  type: "slack"
+  slack:
+    channel: "#demos"
+  email:
+    subject: "Recap demo de mañana: {deal_name}"
+
+scheduler:
+  # Hora del día en que se ejecuta el check (formato HH:MM)
+  run_at: "09:00"

@@ -1,0 +1,97 @@
+import os
+import anthropic
+
+client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+
+BANT_CHECK_PROMPT = """Eres un analista de ventas B2B. Analiza las siguientes notas de un deal y determina si contienen un análisis BANT completo o parcial.
+
+BANT = Budget (presupuesto), Authority (autoridad/decisor), Need (necesidad), Timeline (plazo).
+
+Notas del deal:
+{notes}
+
+Responde en este formato exacto:
+HAS_BANT: true/false
+BUDGET: [lo que se menciona o "no mencionado"]
+AUTHORITY: [lo que se menciona o "no mencionado"]
+NEED: [lo que se menciona o "no mencionado"]
+TIMELINE: [lo que se menciona o "no mencionado"]
+MISSING: [lista de campos BANT que faltan completamente, separados por coma, o "ninguno"]"""
+
+RECAP_PROMPT = """Eres un asistente de ventas B2B experto. Basándote en el BANT y las notas del deal, genera un recap conciso para preparar la demo de mañana.
+
+Deal: {deal_name}
+Importe: {amount}
+
+BANT detectado:
+- Budget: {budget}
+- Authority: {authority}
+- Need: {need}
+- Timeline: {timeline}
+
+Notas completas:
+{notes}
+
+Genera un mensaje de preparación para la demo que incluya:
+1. **Contexto del cliente** (quién es, qué problema tiene)
+2. **Temas a tocar en la demo** (basados en sus necesidades)
+3. **Preguntas/problemas que responder** (según el BANT)
+4. **Puntos de atención** (objeciones probables, decisor, urgencia)
+
+Sé directo y accionable. Máximo 250 palabras."""
+
+
+def analyze_bant(notes: list) -> dict:
+    if not notes:
+        return {"has_bant": False, "budget": "no mencionado", "authority": "no mencionado",
+                "need": "no mencionado", "timeline": "no mencionado", "missing": ["Budget", "Authority", "Need", "Timeline"]}
+
+    notes_text = "\n\n---\n\n".join(n["body"] for n in notes)
+
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=500,
+        messages=[{"role": "user", "content": BANT_CHECK_PROMPT.format(notes=notes_text)}],
+    )
+    text = response.content[0].text.strip()
+
+    result = {}
+    for line in text.splitlines():
+        if ":" in line:
+            key, _, val = line.partition(":")
+            result[key.strip().upper()] = val.strip()
+
+    has_bant = result.get("HAS_BANT", "false").lower() == "true"
+    missing = [m.strip() for m in result.get("MISSING", "").split(",") if m.strip() and m.strip().lower() != "ninguno"]
+
+    return {
+        "has_bant": has_bant,
+        "budget": result.get("BUDGET", "no mencionado"),
+        "authority": result.get("AUTHORITY", "no mencionado"),
+        "need": result.get("NEED", "no mencionado"),
+        "timeline": result.get("TIMELINE", "no mencionado"),
+        "missing": missing,
+    }
+
+
+def generate_recap(deal: dict, notes: list, bant: dict) -> str:
+    props = deal.get("properties", {})
+    notes_text = "\n\n---\n\n".join(n["body"] for n in notes)
+
+    response = client.messages.create(
+        model="claude-sonnet-4-6",
+        max_tokens=800,
+        messages=[{
+            "role": "user",
+            "content": RECAP_PROMPT.format(
+                deal_name=props.get("dealname", "Sin nombre"),
+                amount=props.get("amount", "No especificado"),
+                budget=bant["budget"],
+                authority=bant["authority"],
+                need=bant["need"],
+                timeline=bant["timeline"],
+                notes=notes_text,
+            )
+        }],
+    )
+    return response.content[0].text.strip()
