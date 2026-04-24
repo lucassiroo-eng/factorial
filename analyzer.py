@@ -18,18 +18,27 @@ def _call(prompt: str, max_tokens: int = 800) -> str:
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
-_BANT_PROMPT = """Tu es un analyste commercial B2B. Analyse les notes suivantes d'un deal et détermine si elles contiennent un BANT (Budget, Authority, Need, Timeline).
+_BANT_PROMPT = """Tu es un analyste commercial B2B expert. Analyse les notes suivantes d'un deal et extrais les informations BANT.
+
+IMPORTANT : Les notes peuvent utiliser n'importe quel format — emojis, tableaux, labels en français, anglais ou espagnol. Sois flexible :
+- Budget = prix, tarif, PEPM, valeur de l'offre, montant, coût, 💰 valeur recommandée, frais, etc.
+- Authority = décideur, autorité, champion, gérant, DG, DRH, qui valide, 🏆 Champion, 💰 Autorité, etc.
+- Need = besoins, problèmes, douleurs, 💡 Besoins, principales douleurs, outils actuels, etc.
+- Timeline = chronologie, délai, timing, 📆 Chronologie, délai de décision, etc.
+
+Si une information est présente même partiellement, considère ce champ comme rempli.
+HAS_BANT doit être true si AU MOINS 3 des 4 champs ont une information concrète.
 
 Notes :
 {notes}
 
-Réponds exactement dans ce format :
+Réponds exactement dans ce format (une ligne par champ) :
 HAS_BANT: true/false
-BUDGET: [ce qui est mentionné ou "non mentionné"]
-AUTHORITY: [ce qui est mentionné ou "non mentionné"]
-NEED: [ce qui est mentionné ou "non mentionné"]
-TIMELINE: [ce qui est mentionné ou "non mentionné"]
-MISSING: [champs BANT absents séparés par virgule, ou "aucun"]"""
+BUDGET: [résumé concis ou "non mentionné"]
+AUTHORITY: [résumé concis ou "non mentionné"]
+NEED: [résumé concis ou "non mentionné"]
+TIMELINE: [résumé concis ou "non mentionné"]
+MISSING: [champs BANT absents, séparés par virgule, ou "aucun"]"""
 
 
 _EMAIL_PROMPT = """Tu es un expert en vente B2B SaaS RH. Écris un email de confirmation de démo au nom de {owner_name}, Account Executive chez Factorial.
