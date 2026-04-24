@@ -18,51 +18,69 @@ def _call(prompt: str, max_tokens: int = 1200) -> str:
 
 # ── Master prompt ─────────────────────────────────────────────────────────────
 
-_MASTER_PROMPT = """Tu es un expert en vente B2B SaaS RH chez Factorial. Tu as accès à toutes les informations disponibles sur un prospect qui a une démo demain.
+_MASTER_PROMPT = """You are a top-performing B2B SaaS sales expert at Factorial (HR software). You have full access to every piece of intelligence gathered on a prospect who has a demo tomorrow.
 
-Ton objectif : générer le meilleur email de confirmation possible pour maximiser la présence à la démo, ET un recap interne expliquant tes choix.
+Your goal: write the most personalised, human confirmation email possible to maximise demo attendance — then an internal recap explaining your reasoning.
 
-━━━ INFORMATIONS DU DEAL ━━━
-Deal : {deal_name}
-Montant estimé : {amount}
-Secteur : {industry}
-Date de démo : {meeting_date}
-
-━━━ ENTREPRISE ━━━
-Nom : {company_name}
-Secteur : {company_industry}
-Employés : {employees}
-Pays : {country}
-
-━━━ CONTACT PRINCIPAL ━━━
-Nom : {contact_name}
-Titre : {contact_title}
-Email : {contact_email}
-
-━━━ ACCOUNT EXECUTIVE ━━━
-Nom : {owner_name}
-
-━━━ TOUTES LES NOTES DU DEAL ━━━
+━━━ NOTES — READ EVERY WORD ━━━
 {notes}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+━━━ DEAL ━━━
+Name: {deal_name} | Amount: {amount} | Industry: {industry} | Demo: {meeting_date}
 
-INSTRUCTIONS :
+━━━ COMPANY ━━━
+{company_name} · {company_industry} · {employees} employees · {country}
 
-1. Analyse TOUTES les informations ci-dessus — notes, propriétés, contexte — même si elles sont partielles, en emojis, en français, anglais ou espagnol.
-2. Extrais les signaux clés : qui décide, quel problème urgent, quel timing, quel budget indicatif, quels outils actuels, quelles objections probables.
-3. S'il n'y a AUCUNE information utile (notes vides ET propriétés vides), réponds uniquement avec : NO_INFO
+━━━ CONTACT ━━━
+{contact_name} · {contact_title} · {contact_email}
 
-Sinon, génère EXACTEMENT ce format (garde les séparateurs) :
+━━━ ACCOUNT EXECUTIVE ━━━
+{owner_name}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1 — MANDATORY EXTRACTION (do this silently before writing anything):
+Read every note and extract:
+  A) Current tools / software they use (HR, payroll, time-tracking, spreadsheets, etc.)
+  B) Specific pain points or frustrations — use their exact words if mentioned
+  C) Their primary goal — WHY they booked this demo
+  D) Other people involved in the decision (names + roles)
+  E) Timeline or urgency signals (go-live date, project deadline, headcount growth)
+  F) Objections, conditions or hesitations mentioned
+  G) Concrete numbers: headcount, offices, countries, hours lost, manual tasks, etc.
+  H) Any recent event: funding, acquisition, reorg, new HR hire, compliance issue
+
+STEP 2 — WRITE THE EMAIL in French, signed as {owner_name}:
+  - Open with {contact_name}'s first name
+  - Hook: reference a SPECIFIC situation, tool, or pain point extracted from the notes — do NOT open generically ("suite à notre échange" is forbidden)
+  - Weave at least 2-3 concrete details from the notes naturally into the body — show you were listening
+  - Value: frame what they'll get from the demo in terms of THEIR specific problem, not generic features
+  - Tone: warm, direct, human — like a message from a colleague, not a sales template
+  - Length: 5-7 sentences maximum
+  - Close: invite them to reply if they want to add topics or reschedule
+  - Signature: {owner_name} / Account Executive — Factorial
+
+STEP 3 — INTERNAL RECAP in English (for the AE's eyes only):
+  - What you found in the notes (specific signals used)
+  - Which angle you chose for the email and why
+  - 2 deal risk factors or open questions
+  - 1-2 suggested angles or questions to open the demo with
+
+If there is ZERO useful information in the notes AND all properties are N/A, output only: NO_INFO
+
+Otherwise output EXACTLY this format (keep the delimiters):
 
 EMAIL_START
-Objet : [objet accrocheur]
+Objet : [subject line that mirrors their specific situation — not generic]
 
-[corps de l'email en français, 4-5 phrases max, voix de {owner_name}, chaleureux et direct, jamais corporate. Accroche sur leur situation sans la nommer littéralement. Ce qu'ils repartiront avec (résultats, pas features). Une phrase offrant de répondre pour couvrir des points ou se réorganiser si besoin. Signature : {owner_name} / Account Executive — Factorial]
+[email body]
+
+{owner_name}
+Account Executive — Factorial
 EMAIL_END
 
 RECAP_START
-[recap in English, 5-8 lines. Explain: what we know about the prospect, why those specific arguments, 1-2 deal risk points]
+[internal recap in English]
 RECAP_END"""
 
 
@@ -94,10 +112,10 @@ def analyze_and_generate(context: dict) -> tuple[str | None, str | None]:
         contact_title  = contact.get("jobtitle", "N/A"),
         contact_email  = contact.get("email", "N/A"),
         owner_name     = f"{owner.get('firstName','')} {owner.get('lastName','')}".strip() or "Votre Account Executive",
-        notes          = notes_text[:5000],
+        notes          = notes_text[:10000],
     )
 
-    result = _call(prompt, max_tokens=1200)
+    result = _call(prompt, max_tokens=2000)
 
     if "NO_INFO" in result:
         return None, None
