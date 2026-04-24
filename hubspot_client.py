@@ -31,29 +31,14 @@ class HubSpotClient:
     def get_next_future_deal(self, filter_type: str, filter_value: str) -> dict | None:
         """
         Devuelve el deal con first_meeting_at más próximo a hoy (futuro).
-        filter_type: "owner" | "market"
-        filter_value: owner_id numérico | valor del campo market
+        filter_type: "owner" | "market" | "provenance"
         """
         today_ms = str(_date_to_ms(date.today()))
 
         base_filters = [
             {"propertyName": "first_meeting_at", "operator": "GTE", "value": today_ms},
         ]
-
-        if filter_type == "owner":
-            base_filters.append({
-                "propertyName": "hubspot_owner_id",
-                "operator": "EQ",
-                "value": str(filter_value),
-            })
-        elif filter_type == "market":
-            base_filters.append({
-                "propertyName": "country_qobra_samba",  # verificar API name
-                "operator": "EQ",
-                "value": str(filter_value),
-            })
-        else:
-            raise ValueError(f"filter_type desconocido: {filter_type}. Usa 'owner' o 'market'.")
+        base_filters.append(_build_filter(filter_type, filter_value))
 
         payload = {
             "filterGroups": [{"filters": base_filters}],
@@ -72,11 +57,8 @@ class HubSpotClient:
 
         base_filters = [
             {"propertyName": "first_meeting_at", "operator": "GTE", "value": today_ms},
+            _build_filter(filter_type, filter_value),
         ]
-        if filter_type == "owner":
-            base_filters.append({"propertyName": "hubspot_owner_id", "operator": "EQ", "value": str(filter_value)})
-        elif filter_type == "market":
-            base_filters.append({"propertyName": "country_qobra_samba", "operator": "EQ", "value": str(filter_value)})
 
         all_deals, after = [], None
         while True:
@@ -159,6 +141,20 @@ class HubSpotClient:
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+PIPELINE_IDS = {
+    "partners distribution": "11834984",
+}
+
+def _build_filter(filter_type: str, filter_value: str) -> dict:
+    if filter_type == "owner":
+        return {"propertyName": "hubspot_owner_id", "operator": "EQ", "value": str(filter_value)}
+    if filter_type == "market":
+        return {"propertyName": "country_qobra_samba", "operator": "EQ", "value": str(filter_value)}
+    if filter_type == "provenance":
+        pipeline_id = PIPELINE_IDS.get(filter_value.lower(), filter_value)
+        return {"propertyName": "pipeline", "operator": "EQ", "value": pipeline_id}
+    raise ValueError(f"filter_type desconocido: '{filter_type}'. Usa 'owner', 'market' o 'provenance'.")
 
 def _date_to_ms(d: date) -> int:
     dt = datetime.datetime.combine(d, datetime.time.min)

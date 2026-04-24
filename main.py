@@ -60,11 +60,14 @@ def run(filter_type: str, filter_value: str):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Demo prep — HubSpot + Claude + Slack")
     group  = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--owner",  help="Owner ID numérico de HubSpot (ej: 86688154)")
-    group.add_argument("--market", help="Valor del campo Market SAMBA (ej: France)")
+    group.add_argument("--owner",      help="Owner ID numérico de HubSpot (ej: 86688154)")
+    group.add_argument("--market",     help="Valor del campo Market SAMBA (ej: France)")
+    group.add_argument("--provenance", help="Pipeline de provenance (ej: 'Partners Distribution')")
     args = parser.parse_args()
 
     if args.owner:
         run("owner", args.owner)
-    else:
+    elif args.market:
         run("market", args.market)
+    else:
+        run("provenance", args.provenance)

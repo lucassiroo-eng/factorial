@@ -4,12 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       filter_type:
-        description: "¿Filtrar por owner o por mercado?"
+        description: "¿Filtrar por owner, mercado o provenance?"
         required: true
         type: choice
         options:
           - owner
           - market
+          - provenance
         default: owner
 
       owner_id:
@@ -23,6 +24,14 @@ on:
         required: false
         type: string
         default: ""
+
+      provenance_value:
+        description: "Provenance (si elegiste 'provenance') — ej: Partners Distribution"
+        required: false
+        type: choice
+        options:
+          - Partners Distribution
+        default: Partners Distribution
 
       deal_selection:
         description: "¿Qué deal analizar?"
@@ -53,13 +62,12 @@ jobs:
 
       - name: ✅ Validar inputs
         run: |
-          if [ "${{ github.event.inputs.filter_type }}" = "owner" ] && [ -z "${{ github.event.inputs.owner_id }}" ]; then
-            echo "❌ ERROR: Debes introducir un Owner ID cuando el filtro es 'owner'."
-            exit 1
+          TYPE="${{ github.event.inputs.filter_type }}"
+          if [ "$TYPE" = "owner" ] && [ -z "${{ github.event.inputs.owner_id }}" ]; then
+            echo "❌ ERROR: Debes introducir un Owner ID cuando el filtro es 'owner'."; exit 1
           fi
-          if [ "${{ github.event.inputs.filter_type }}" = "market" ] && [ -z "${{ github.event.inputs.market_value }}" ]; then
-            echo "❌ ERROR: Debes introducir un valor de mercado cuando el filtro es 'market'."
-            exit 1
+          if [ "$TYPE" = "market" ] && [ -z "${{ github.event.inputs.market_value }}" ]; then
+            echo "❌ ERROR: Debes introducir un valor de mercado cuando el filtro es 'market'."; exit 1
           fi
 
       - name: 🚀 Ejecutar demo prep
@@ -71,10 +79,13 @@ jobs:
           SLACK_TOKEN:              ${{ secrets.SLACK_TOKEN }}
           SLACK_USER_ID:            ${{ secrets.SLACK_USER_ID }}
         run: |
-          if [ "${{ github.event.inputs.filter_type }}" = "owner" ]; then
+          TYPE="${{ github.event.inputs.filter_type }}"
+          if [ "$TYPE" = "owner" ]; then
             python main.py --owner "${{ github.event.inputs.owner_id }}"
-          else
+          elif [ "$TYPE" = "market" ]; then
             python main.py --market "${{ github.event.inputs.market_value }}"
+          else
+            python main.py --provenance "${{ github.event.inputs.provenance_value }}"
           fi
 
       - name: ✅ Resultado
