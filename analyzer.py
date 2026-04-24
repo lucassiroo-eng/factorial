@@ -115,7 +115,7 @@ def analyze_and_generate(context: dict) -> tuple[str | None, str | None]:
         notes          = notes_text[:10000],
     )
 
-    result = _call(prompt, max_tokens=2000)
+    result = _call(prompt, max_tokens=4000)
 
     if "NO_INFO" in result:
         return None, None
