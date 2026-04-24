@@ -10,7 +10,7 @@ HUBSPOT_BASE = "https://api.hubapi.com"
 DEAL_PROPS = [
     "dealname", "amount", "dealstage", "hubspot_owner_id",
     "first_meeting_at", "industry",
-    "market_samba",   # ← pendiente verificar API name exacto
+    "country_qobra_samba",
 ]
 CONTACT_PROPS = ["firstname", "lastname", "jobtitle", "email"]
 COMPANY_PROPS = ["name", "industry", "numberofemployees"]
@@ -48,7 +48,7 @@ class HubSpotClient:
             })
         elif filter_type == "market":
             base_filters.append({
-                "propertyName": "market_samba",  # verificar API name
+                "propertyName": "country_qobra_samba",  # verificar API name
                 "operator": "EQ",
                 "value": str(filter_value),
             })
@@ -76,7 +76,7 @@ class HubSpotClient:
         if filter_type == "owner":
             base_filters.append({"propertyName": "hubspot_owner_id", "operator": "EQ", "value": str(filter_value)})
         elif filter_type == "market":
-            base_filters.append({"propertyName": "market_samba", "operator": "EQ", "value": str(filter_value)})
+            base_filters.append({"propertyName": "country_qobra_samba", "operator": "EQ", "value": str(filter_value)})
 
         all_deals, after = [], None
         while True:
