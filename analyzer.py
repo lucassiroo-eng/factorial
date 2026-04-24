@@ -6,39 +6,43 @@ import requests
 _AZURE_ENDPOINT = os.environ.get("AZURE_ANTHROPIC_ENDPOINT", "https://partners-bizdev-ai.services.ai.azure.com/anthropic")
 _AZURE_KEY      = os.environ.get("AZURE_ANTHROPIC_API_KEY", "")
 _MODEL          = os.environ.get("AZURE_ANTHROPIC_MODEL", "claude-opus-4-6")
-_API_VERSION    = "2024-10-01-preview"
-
-# Formatos de auth que prueba Azure AI Foundry en orden
-_AUTH_FORMATS = [
-    {"api-key": "{key}"},
-    {"Authorization": "Bearer {key}"},
-    {"x-api-key": "{key}"},
-]
-
-
 def _call(prompt: str, max_tokens: int = 800) -> str:
-    url  = f"{_AZURE_ENDPOINT.rstrip('/')}/v1/messages"
+    base = _AZURE_ENDPOINT.rstrip("/")
     body = {
         "model": _MODEL,
         "max_tokens": max_tokens,
         "messages": [{"role": "user", "content": prompt}],
     }
 
-    last_error = None
-    for auth_template in _AUTH_FORMATS:
-        headers = {k: v.replace("{key}", _AZURE_KEY) for k, v in auth_template.items()}
-        headers.update({"anthropic-version": "2023-06-01", "content-type": "application/json"})
+    # Combinaciones (url, headers) a intentar en orden
+    attempts = [
+        # 1. Azure AI Foundry — sin api-version
+        (f"{base}/v1/messages",
+         {"api-key": _AZURE_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+         {}),
+        # 2. Azure AI Foundry — con api-version
+        (f"{base}/v1/messages",
+         {"api-key": _AZURE_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+         {"api-version": "2024-10-01-preview"}),
+        # 3. Azure Cognitive Services key header
+        (f"{base}/v1/messages",
+         {"Ocp-Apim-Subscription-Key": _AZURE_KEY, "anthropic-version": "2023-06-01", "content-type": "application/json"},
+         {}),
+        # 4. Bearer token
+        (f"{base}/v1/messages",
+         {"Authorization": f"Bearer {_AZURE_KEY}", "anthropic-version": "2023-06-01", "content-type": "application/json"},
+         {}),
+    ]
 
-        resp = requests.post(url, params={"api-version": _API_VERSION},
-                             headers=headers, json=body, timeout=60)
+    last_error = None
+    for url, headers, params in attempts:
+        resp = requests.post(url, headers=headers, params=params, json=body, timeout=60)
+        print(f"  [debug] {list(headers.keys())[0]} → {resp.status_code}")
         if resp.ok:
             return resp.json()["content"][0]["text"].strip()
+        last_error = f"[{resp.status_code}] {resp.text[:200]}"
 
-        last_error = f"[Azure {resp.status_code}] {resp.text[:300]}"
-        if resp.status_code not in (401, 403):
-            break  # error no relacionado con auth, no intentar otros formatos
-
-    raise RuntimeError(f"Azure Anthropic error: {last_error}")
+    raise RuntimeError(f"Azure Anthropic — todos los formatos fallaron. Último error: {last_error}")
 
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
