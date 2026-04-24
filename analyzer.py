@@ -6,27 +6,39 @@ import requests
 _AZURE_ENDPOINT = os.environ.get("AZURE_ANTHROPIC_ENDPOINT", "https://partners-bizdev-ai.services.ai.azure.com/anthropic")
 _AZURE_KEY      = os.environ.get("AZURE_ANTHROPIC_API_KEY", "")
 _MODEL          = os.environ.get("AZURE_ANTHROPIC_MODEL", "claude-opus-4-6")
-_API_VERSION    = "2024-12-01-preview"
+_API_VERSION    = "2024-10-01-preview"
+
+# Formatos de auth que prueba Azure AI Foundry en orden
+_AUTH_FORMATS = [
+    {"api-key": "{key}"},
+    {"Authorization": "Bearer {key}"},
+    {"x-api-key": "{key}"},
+]
 
 
 def _call(prompt: str, max_tokens: int = 800) -> str:
-    resp = requests.post(
-        f"{_AZURE_ENDPOINT.rstrip('/')}/v1/messages",
-        params={"api-version": _API_VERSION},
-        headers={
-            "api-key": _AZURE_KEY,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-        json={
-            "model": _MODEL,
-            "max_tokens": max_tokens,
-            "messages": [{"role": "user", "content": prompt}],
-        },
-        timeout=60,
-    )
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"].strip()
+    url  = f"{_AZURE_ENDPOINT.rstrip('/')}/v1/messages"
+    body = {
+        "model": _MODEL,
+        "max_tokens": max_tokens,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+
+    last_error = None
+    for auth_template in _AUTH_FORMATS:
+        headers = {k: v.replace("{key}", _AZURE_KEY) for k, v in auth_template.items()}
+        headers.update({"anthropic-version": "2023-06-01", "content-type": "application/json"})
+
+        resp = requests.post(url, params={"api-version": _API_VERSION},
+                             headers=headers, json=body, timeout=60)
+        if resp.ok:
+            return resp.json()["content"][0]["text"].strip()
+
+        last_error = f"[Azure {resp.status_code}] {resp.text[:300]}"
+        if resp.status_code not in (401, 403):
+            break  # error no relacionado con auth, no intentar otros formatos
+
+    raise RuntimeError(f"Azure Anthropic error: {last_error}")
 
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
