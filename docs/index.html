@@ -101,30 +101,33 @@
     /* Each dot disappears when pacman's centre reaches its left position.
        Pacman travels over 1.8s; centre offset = 20px. For a dot at X%:
        eat_pct ≈ (X% − 20px) / (container − 40px). Approximated at 600px wide. */
+    /* Dot positions + eat animations synced to pacman's centre reaching each dot.
+       Container ≈576px, pacman centre travels 20px→556px in 1.8s.
+       eat pct = (dot_px − 20) / 536 × 100 */
     .pac-dot:nth-child(2) { left:18%; animation: eat18 1.8s linear infinite; }
     .pac-dot:nth-child(3) { left:33%; animation: eat33 1.8s linear infinite; }
     .pac-dot:nth-child(4) { left:50%; animation: eat50 1.8s linear infinite; }
     .pac-dot:nth-child(5) { left:67%; animation: eat67 1.8s linear infinite; }
     .pac-dot:nth-child(6) { left:82%; animation: eat82 1.8s linear infinite; }
     @keyframes eat18 {
-      0%,15%  { opacity:1; transform:translateY(-50%) scale(1); }
-      20%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
+      0%,14%  { opacity:1; transform:translateY(-50%) scale(1); }
+      19%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
     }
     @keyframes eat33 {
-      0%,29%  { opacity:1; transform:translateY(-50%) scale(1); }
-      34%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
+      0%,30%  { opacity:1; transform:translateY(-50%) scale(1); }
+      35%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
     }
     @keyframes eat50 {
-      0%,45%  { opacity:1; transform:translateY(-50%) scale(1); }
-      50%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
+      0%,47%  { opacity:1; transform:translateY(-50%) scale(1); }
+      52%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
     }
     @keyframes eat67 {
-      0%,61%  { opacity:1; transform:translateY(-50%) scale(1); }
-      66%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
+      0%,65%  { opacity:1; transform:translateY(-50%) scale(1); }
+      70%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
     }
     @keyframes eat82 {
-      0%,77%  { opacity:1; transform:translateY(-50%) scale(1); }
-      82%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
+      0%,82%  { opacity:1; transform:translateY(-50%) scale(1); }
+      87%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
     }
   </style>
 </head>
@@ -422,7 +425,7 @@ function selectMode(m) {
   document.getElementById('owner-config').classList.toggle('hidden', m !== 'owner');
   document.getElementById('market-config').classList.toggle('hidden', m !== 'market');
   document.getElementById('search-btn').disabled = true;
-  if (m === 'owner') loadOwners();
+  loadOwners(); // always load so owner names resolve in deal cards for both modes
   goTo(1);
 }
 
@@ -569,19 +572,6 @@ function showLoading(text) {
   document.getElementById('search-error').classList.add('hidden');
   document.getElementById('deals-content').classList.add('hidden');
   document.getElementById('search-status-text').textContent = text;
-  renderPacDots();
-}
-
-function renderPacDots() {
-  const stage = document.getElementById('pac-stage');
-  stage.querySelectorAll('.pac-dot').forEach(d => d.remove());
-  [22, 34, 46, 58, 70, 82].forEach((pct, i) => {
-    const dot = document.createElement('div');
-    dot.className = 'pac-dot';
-    dot.style.left = pct + '%';
-    dot.style.animationDelay = (i * 0.3) + 's';
-    stage.appendChild(dot);
-  });
 }
 
 function showSearchError(msg) {
