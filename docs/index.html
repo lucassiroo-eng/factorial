@@ -6,92 +6,114 @@
   <title>Demo Prep — Factorial</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <style>
-    * { font-family: 'Inter', sans-serif; }
-    body { background: #f7f7f8; }
-    ::-webkit-scrollbar { width: 6px; }
-    ::-webkit-scrollbar-thumb { background: #ddd; border-radius: 3px; }
+    :root {
+      --red:        #FF355E;
+      --red-dark:   #C60F35;
+      --red-weak:   #FFE3EA;
+      --midnight:   #25253D;
+      --ink-700:    #3F3F55;
+      --ink-500:    #6C6C7D;
+      --ink-400:    #8F8FA0;
+      --ink-200:    #D4D4DC;
+      --ink-100:    #ECECEF;
+      --ink-50:     #F6F6F8;
+      --bg:         #FAFAFC;
+      --border:     #E6E6EC;
+      --border-s:   #CFCFD8;
+      --shadow-sm:  0 2px 6px rgba(37,37,61,.08);
+      --shadow-md:  0 8px 24px rgba(37,37,61,.10);
+      --ease:       cubic-bezier(0.2,0.8,0.2,1);
+    }
+    * { font-family:'DM Sans',ui-sans-serif,system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+    body { background:var(--bg); color:var(--midnight); }
+    ::-webkit-scrollbar { width:5px; }
+    ::-webkit-scrollbar-thumb { background:var(--ink-200); border-radius:3px; }
 
-    .step { display: none; }
-    .step.active { display: block; }
-    .fade-in { animation: fadeIn .22s ease; }
-    @keyframes fadeIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:translateY(0); } }
+    .step { display:none; }
+    .step.active { display:block; }
+    .fade-in { animation:fadeIn 200ms var(--ease); }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
 
     .mode-card {
-      cursor:pointer; border:2px solid #e5e7eb; background:white;
-      transition:border-color .15s, box-shadow .15s, transform .12s;
+      cursor:pointer; border:1px solid var(--border); background:#fff;
+      transition:border-color 200ms var(--ease), box-shadow 200ms var(--ease);
     }
-    .mode-card:hover { border-color:#ff4d00; box-shadow:0 0 0 4px rgba(255,77,0,.08); transform:translateY(-2px); }
+    .mode-card:hover { border-color:var(--red); box-shadow:0 0 0 3px rgba(255,53,94,.12); }
 
-    /* Owner dropdown */
     .owner-dropdown {
-      background:white; border:1.5px solid #e5e7eb; border-radius:14px;
-      box-shadow:0 8px 24px rgba(0,0,0,.1); max-height:220px; overflow-y:auto;
+      background:#fff; border:1px solid var(--border); border-radius:12px;
+      box-shadow:var(--shadow-md); max-height:220px; overflow-y:auto;
     }
-    .owner-option { padding:10px 14px; cursor:pointer; border-radius:10px; transition:background .1s; }
-    .owner-option:hover { background:#fff5f2; }
+    .owner-option { padding:10px 14px; cursor:pointer; border-radius:8px; transition:background 120ms; }
+    .owner-option:hover { background:#FFF0F3; }
 
-    /* Market select */
     .market-select {
-      appearance:none; border:2px solid #e5e7eb;
-      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
+      appearance:none; border:1px solid var(--ink-200);
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236C6C7D'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E");
       background-repeat:no-repeat; background-position:right 16px center; background-size:18px;
-      padding-right:44px; cursor:pointer; transition:border-color .15s, box-shadow .15s;
+      padding-right:44px; cursor:pointer; transition:border-color 200ms,box-shadow 200ms;
     }
 
     .deal-card {
-      background:white; border:2px solid #e5e7eb; border-radius:14px;
-      cursor:pointer; transition:border-color .15s, box-shadow .15s; user-select:none;
+      background:#fff; border:1px solid var(--border); border-radius:12px;
+      cursor:pointer; transition:border-color 200ms var(--ease),box-shadow 200ms var(--ease); user-select:none;
     }
-    .deal-card:hover { border-color:#d1d5db; box-shadow:0 2px 12px rgba(0,0,0,.06); }
-    .deal-card.selected { border-color:#ff4d00; box-shadow:0 0 0 3px rgba(255,77,0,.1); }
+    .deal-card:hover { border-color:var(--border-s); box-shadow:var(--shadow-sm); }
+    .deal-card.selected { border-color:var(--red); box-shadow:0 0 0 3px rgba(255,53,94,.12); }
     .deal-checkbox {
-      width:22px; height:22px; border:2px solid #d1d5db; border-radius:6px;
-      display:flex; align-items:center; justify-content:center; transition:all .15s; flex-shrink:0;
+      width:20px; height:20px; border:1.5px solid var(--ink-200); border-radius:6px;
+      display:flex; align-items:center; justify-content:center; transition:all 200ms; flex-shrink:0;
     }
-    .deal-card.selected .deal-checkbox { background:#ff4d00; border-color:#ff4d00; }
+    .deal-card.selected .deal-checkbox { background:var(--red); border-color:var(--red); }
 
     .btn-primary {
-      background:#ff4d00; color:white; border-radius:12px; font-weight:600; font-size:15px;
-      transition:background .15s, transform .1s, box-shadow .15s;
+      background:var(--red); color:#fff; border-radius:999px; font-weight:500; font-size:14px;
+      letter-spacing:-0.01em;
+      transition:background 200ms var(--ease),box-shadow 200ms var(--ease);
     }
-    .btn-primary:hover:not(:disabled) { background:#e04300; box-shadow:0 4px 16px rgba(255,77,0,.35); }
-    .btn-primary:active:not(:disabled) { transform:scale(.98); }
-    .btn-primary:disabled { background:#fca07a; cursor:not-allowed; }
+    .btn-primary:hover:not(:disabled) { background:var(--red-dark); box-shadow:0 4px 16px rgba(255,53,94,.30); }
+    .btn-primary:focus-visible { box-shadow:0 0 0 3px rgba(255,53,94,.25); }
+    .btn-primary:disabled { opacity:.4; cursor:not-allowed; }
 
     .btn-ghost {
-      color:#6b7280; border-radius:10px; font-weight:500; font-size:14px;
-      transition:color .15s, background .15s;
+      color:var(--ink-500); border-radius:999px; font-weight:500; font-size:14px;
+      letter-spacing:-0.01em;
+      transition:color 200ms,background 200ms;
     }
-    .btn-ghost:hover { color:#111; background:#f3f4f6; }
+    .btn-ghost:hover { color:var(--midnight); background:var(--ink-50); }
 
-    .send-item { border-radius:10px; background:white; border:1.5px solid #e5e7eb; }
-    .send-item.running { border-color:#fb923c; }
-    .send-item.done { border-color:#86efac; background:#f0fdf4; }
-    .send-item.error { border-color:#fca5a5; background:#fef2f2; }
+    .send-item { border-radius:12px; background:#fff; border:1px solid var(--border); }
+    .send-item.running { border-color:var(--red); }
+    .send-item.done { border-color:#2E8B7B; background:#F0FBF9; }
+    .send-item.error { border-color:var(--border-s); background:var(--ink-50); }
 
     input[type=text], input[type=password], select {
-      outline:none; border:2px solid #e5e7eb; transition:border-color .15s, box-shadow .15s;
+      outline:none; border:1px solid var(--ink-200); color:var(--midnight);
+      font-family:'DM Sans',sans-serif; letter-spacing:-0.01em;
+      transition:border-color 200ms,box-shadow 200ms;
     }
     input[type=text]:focus, input[type=password]:focus, select:focus {
-      border-color:#ff4d00; box-shadow:0 0 0 3px rgba(255,77,0,.1);
+      border-color:var(--red); box-shadow:0 0 0 3px rgba(255,53,94,.25);
     }
 
-    .date-badge { background:#fff5f2; color:#c2410c; border:1px solid #fed7aa; }
+    .date-badge { background:var(--ink-50); color:var(--midnight); border:1px solid var(--border); font-weight:500; letter-spacing:-0.01em; }
 
-    /* Search spinner */
-    .search-spinner { width:40px; height:40px; border-radius:50%; border:3px solid #ffe8e0; border-top-color:#ff4d00; animation:spin .8s linear infinite; margin:0 auto; }
+    .search-spinner { width:36px; height:36px; border-radius:50%; border:2.5px solid var(--red-weak); border-top-color:var(--red); animation:spin .7s linear infinite; margin:0 auto; }
     @keyframes spin { to { transform:rotate(360deg); } }
+
+    h1,h2,h3,h4 { letter-spacing:-0.02em; color:var(--midnight); }
+    p { letter-spacing:-0.01em; }
   </style>
 </head>
 <body class="min-h-screen">
 
   <!-- Settings overlay -->
   <div id="settings-overlay" class="hidden fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 fade-in">
+    <div class="bg-white w-full max-w-md p-6 fade-in" style="border-radius:12px;box-shadow:0 24px 48px rgba(37,37,61,.14);">
       <div class="flex items-center justify-between mb-5">
-        <h3 class="font-bold text-gray-900 text-lg">API Keys</h3>
+        <h3 class="font-medium text-lg" style="color:var(--midnight);letter-spacing:-0.02em;">Settings</h3>
         <button onclick="closeSettings()" class="text-gray-400 hover:text-gray-600 p-1">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
@@ -122,15 +144,17 @@
   </div>
 
   <!-- Top bar -->
-  <div class="bg-white border-b border-gray-100 sticky top-0 z-40">
+  <div class="bg-white sticky top-0 z-40" style="border-bottom:1px solid var(--border);">
     <div class="max-w-2xl mx-auto px-4 h-14 flex items-center justify-between">
-      <div class="flex items-center gap-2.5">
-        <div class="w-7 h-7 bg-[#ff4d00] rounded-lg flex items-center justify-center">
-          <span class="text-white text-sm font-bold">F</span>
-        </div>
-        <span class="font-semibold text-gray-900 text-sm">Demo Prep</span>
-        <span class="text-gray-300">·</span>
-        <span class="text-gray-400 text-xs">Partners Distribution</span>
+      <div class="flex items-center gap-3">
+        <svg width="24" height="24" viewBox="0 0 714 714" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M581.784 634.362C520.414 684.16 442.192 714 357 714C271.808 714 193.586 684.16 132.216 634.362C193.586 584.563 271.808 554.723 357 554.723C442.192 554.723 520.414 584.563 581.784 634.362Z" fill="#FF355E"/>
+          <path fill-rule="evenodd" clip-rule="evenodd" d="M130.258 548.192C86.6807 496.565 60.4154 429.85 60.4154 357C60.4154 193.201 193.201 60.4154 357 60.4154C520.799 60.4154 653.585 193.201 653.585 357C653.585 429.85 627.319 496.565 583.742 548.192C598.735 557.56 613.105 567.827 626.773 578.918L632.744 583.763C683.513 522.099 714 443.11 714 357C714 159.834 554.166 0 357 0C159.834 0 0 159.834 0 357C0 443.11 30.487 522.099 81.2561 583.763L87.227 578.918C100.895 567.827 115.265 557.56 130.258 548.192Z" fill="#FF355E"/>
+          <path d="M488.815 346.015C488.815 418.815 429.8 477.831 357 477.831C284.2 477.831 225.185 418.815 225.185 346.015C225.185 273.216 284.2 214.2 357 214.2C429.8 214.2 488.815 273.216 488.815 346.015Z" fill="#FF355E"/>
+        </svg>
+        <span class="font-medium text-sm" style="color:var(--midnight);letter-spacing:-0.01em;">Demo Prep</span>
+        <span style="color:var(--ink-200);">·</span>
+        <span class="text-xs" style="color:var(--ink-400);">Partners Distribution</span>
       </div>
       <button onclick="openSettings()" class="btn-ghost px-3 py-1.5 flex items-center gap-1.5 text-sm">
         <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
@@ -147,32 +171,36 @@
     <!-- ── STEP 0: Landing ──────────────────────── -->
     <div id="step-0" class="step active fade-in">
       <div class="text-center pt-16 pb-10">
-        <div class="inline-flex items-center justify-center w-16 h-16 bg-[#ff4d00] rounded-2xl mb-5 shadow-lg shadow-orange-200">
-          <span class="text-3xl">⚡</span>
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-5" style="background:var(--red);">
+          <svg width="28" height="28" viewBox="0 0 714 714" fill="none"><path d="M581.784 634.362C520.414 684.16 442.192 714 357 714C271.808 714 193.586 684.16 132.216 634.362C193.586 584.563 271.808 554.723 357 554.723C442.192 554.723 520.414 584.563 581.784 634.362Z" fill="white"/><path fill-rule="evenodd" clip-rule="evenodd" d="M130.258 548.192C86.6807 496.565 60.4154 429.85 60.4154 357C60.4154 193.201 193.201 60.4154 357 60.4154C520.799 60.4154 653.585 193.201 653.585 357C653.585 429.85 627.319 496.565 583.742 548.192C598.735 557.56 613.105 567.827 626.773 578.918L632.744 583.763C683.513 522.099 714 443.11 714 357C714 159.834 554.166 0 357 0C159.834 0 0 159.834 0 357C0 443.11 30.487 522.099 81.2561 583.763L87.227 578.918C100.895 567.827 115.265 557.56 130.258 548.192Z" fill="white"/><path d="M488.815 346.015C488.815 418.815 429.8 477.831 357 477.831C284.2 477.831 225.185 418.815 225.185 346.015C225.185 273.216 284.2 214.2 357 214.2C429.8 214.2 488.815 273.216 488.815 346.015Z" fill="white"/></svg>
         </div>
-        <h1 class="text-3xl font-bold text-gray-900 mb-3">Demo Prep</h1>
-        <p class="text-gray-500 text-base max-w-xs mx-auto leading-relaxed">
-          Find upcoming demos, generate personalised emails and send them to Slack — powered by HubSpot &amp; AI.
+        <h1 class="text-3xl font-medium mb-3" style="letter-spacing:-0.03em;">Demo Prep</h1>
+        <p class="text-base max-w-xs mx-auto leading-relaxed" style="color:var(--ink-500);">
+          Find upcoming demos, generate personalised emails and send them to Slack.
         </p>
       </div>
 
-      <p class="text-xs font-semibold text-gray-400 uppercase tracking-widest text-center mb-4">How do you want to search?</p>
-      <div class="grid grid-cols-2 gap-4 mb-6">
-        <div class="mode-card rounded-2xl p-6 text-center" onclick="selectMode('owner')">
-          <div class="text-4xl mb-3">👤</div>
-          <p class="font-bold text-gray-900 text-base mb-1">By Owner</p>
-          <p class="text-gray-400 text-xs leading-relaxed">Demos assigned to a specific Account Executive</p>
+      <p class="text-xs font-medium text-center mb-4" style="color:var(--ink-400);letter-spacing:0.04em;text-transform:uppercase;">How do you want to search?</p>
+      <div class="grid grid-cols-2 gap-3 mb-6">
+        <div class="mode-card rounded-xl p-6 text-center" onclick="selectMode('owner')">
+          <div class="mb-3 flex justify-center">
+            <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="var(--red)" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+          </div>
+          <p class="font-medium text-sm mb-1" style="color:var(--midnight);">By owner</p>
+          <p class="text-xs leading-relaxed" style="color:var(--ink-400);">Demos assigned to a specific AE</p>
         </div>
-        <div class="mode-card rounded-2xl p-6 text-center" onclick="selectMode('market')">
-          <div class="text-4xl mb-3">🌍</div>
-          <p class="font-bold text-gray-900 text-base mb-1">By Market</p>
-          <p class="text-gray-400 text-xs leading-relaxed">All upcoming demos in a country market</p>
+        <div class="mode-card rounded-xl p-6 text-center" onclick="selectMode('market')">
+          <div class="mb-3 flex justify-center">
+            <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="var(--red)" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <p class="font-medium text-sm mb-1" style="color:var(--midnight);">By market</p>
+          <p class="text-xs leading-relaxed" style="color:var(--ink-400);">All upcoming demos in a country</p>
         </div>
       </div>
 
-      <div id="no-token-warning" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 text-center">
-        <p class="text-amber-700 text-sm font-medium">⚠️ Proxy URL or GitHub token not configured.</p>
-        <button onclick="openSettings()" class="text-amber-600 underline text-sm mt-1">Configure in Settings →</button>
+      <div id="no-token-warning" class="hidden rounded-xl p-4 text-center" style="background:var(--red-weak);border:1px solid #FFB3C6;">
+        <p class="text-sm font-medium" style="color:var(--red-dark);">API keys not configured.</p>
+        <button onclick="openSettings()" class="text-sm mt-1 underline" style="color:var(--red-dark);">Configure in Settings</button>
       </div>
     </div>
 
@@ -186,20 +214,20 @@
 
         <!-- Owner -->
         <div id="owner-config" class="hidden">
-          <h2 class="text-2xl font-bold text-gray-900 mb-1">Who's the owner?</h2>
-          <p class="text-gray-400 text-sm mb-5">Search Account Executives</p>
+          <h2 class="text-2xl font-medium mb-1">Who's the owner?</h2>
+          <p class="text-sm mb-5" style="color:var(--ink-500);">Search account executives</p>
 
           <div class="relative">
             <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
             </div>
             <input id="owner-search" type="text" placeholder="Type a name..."
-              class="w-full rounded-2xl pl-11 pr-4 py-3.5 text-sm bg-white"
+              class="w-full pl-11 pr-4 py-3.5 text-sm bg-white" style="border-radius:12px;"
               autocomplete="off"
               oninput="filterOwners(this.value)"
               onfocus="showOwnerDropdown()" />
             <div id="owner-loading" class="hidden absolute right-4 top-1/2 -translate-y-1/2">
-              <div class="w-4 h-4 border-2 border-orange-200 border-t-orange-500 rounded-full animate-spin"></div>
+              <div class="w-4 h-4 rounded-full animate-spin" style="border:2px solid var(--red-weak);border-top-color:var(--red);"></div>
             </div>
           </div>
           <div id="owner-dropdown" class="owner-dropdown hidden mt-2 p-1.5"></div>
@@ -208,9 +236,9 @@
             <button onclick="allOwners=[];ownerMap={};loadOwners()" class="underline ml-1 font-semibold">Retry</button>
           </div>
 
-          <div id="owner-selected-box" class="hidden mt-4 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3 flex items-center justify-between">
+          <div id="owner-selected-box" class="hidden mt-4 px-4 py-3 flex items-center justify-between rounded-xl" style="background:var(--red-weak);border:1px solid #FFB3C6;">
             <div class="flex items-center gap-3">
-              <div id="owner-avatar" class="w-9 h-9 bg-[#ff4d00] rounded-full flex items-center justify-center text-white font-bold text-sm">?</div>
+              <div id="owner-avatar" class="w-9 h-9 rounded-full flex items-center justify-center text-white font-medium text-sm" style="background:var(--red);">?</div>
               <div>
                 <p class="font-semibold text-gray-900 text-sm" id="owner-selected-name">—</p>
                 <p class="text-gray-400 text-xs" id="owner-selected-email">—</p>
@@ -224,10 +252,10 @@
 
         <!-- Market -->
         <div id="market-config" class="hidden">
-          <h2 class="text-2xl font-bold text-gray-900 mb-1">Which market?</h2>
-          <p class="text-gray-400 text-sm mb-5">Select the country market</p>
+          <h2 class="text-2xl font-medium mb-1">Which market?</h2>
+          <p class="text-sm mb-5" style="color:var(--ink-500);">Select the country market</p>
           <select id="market-select"
-            class="market-select w-full rounded-2xl px-5 py-4 text-sm bg-white text-gray-700"
+            class="market-select w-full px-5 py-4 text-sm bg-white" style="border-radius:12px;color:var(--midnight);"
             onchange="onMarketChange()">
             <option value="" disabled selected>Select a market...</option>
           </select>
@@ -251,9 +279,9 @@
 
         <!-- Loading -->
         <div id="search-loading" class="hidden">
-          <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center">
+          <div class="p-12 text-center rounded-xl bg-white" style="border:1px solid var(--border);">
             <div class="search-spinner mb-4"></div>
-            <p class="text-gray-500 text-sm" id="search-status-text">Searching HubSpot...</p>
+            <p class="text-sm" style="color:var(--ink-500);" id="search-status-text">Searching HubSpot...</p>
           </div>
         </div>
 
@@ -268,23 +296,25 @@
         <div id="deals-content" class="hidden">
           <div class="flex items-center justify-between mb-5">
             <div>
-              <h2 class="text-xl font-bold text-gray-900" id="deals-title">Upcoming demos</h2>
-              <p class="text-gray-400 text-sm" id="deals-subtitle"></p>
+              <h2 class="text-xl font-medium" id="deals-title">Upcoming demos</h2>
+              <p class="text-sm" style="color:var(--ink-400);" id="deals-subtitle"></p>
             </div>
             <button onclick="toggleSelectAll()" id="select-all-btn"
               class="hidden btn-ghost px-3 py-1.5 text-xs">Select all</button>
           </div>
           <div id="deals-list" class="space-y-3"></div>
           <div id="no-deals" class="hidden text-center py-12">
-            <div class="text-4xl mb-3">📭</div>
-            <p class="font-semibold text-gray-700">No upcoming demos found</p>
-            <p class="text-gray-400 text-sm mt-1">No deals matching this filter</p>
+            <div class="w-12 h-12 rounded-full mx-auto mb-4 flex items-center justify-center" style="background:var(--ink-50);">
+              <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="var(--ink-400)" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <p class="font-medium" style="color:var(--midnight);">No upcoming demos found</p>
+            <p class="text-sm mt-1" style="color:var(--ink-400);">No deals matching this filter</p>
           </div>
         </div>
       </div>
 
       <!-- Sticky send bar -->
-      <div id="send-bar" class="hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-gray-100 p-4 z-30">
+      <div id="send-bar" class="hidden fixed bottom-0 left-0 right-0 p-4 z-30" style="background:rgba(250,250,252,.96);border-top:1px solid var(--border);backdrop-filter:blur(8px);">
         <div class="max-w-2xl mx-auto">
           <button onclick="startSending()"
             class="btn-primary w-full py-4 flex items-center justify-center gap-2.5">
@@ -299,18 +329,20 @@
     <div id="step-3" class="step fade-in">
       <div class="pt-8 pb-24">
         <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center w-14 h-14 bg-orange-50 rounded-2xl mb-4">
-            <span class="text-2xl">📤</span>
+          <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style="background:var(--red-weak);">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="var(--red)" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
           </div>
-          <h2 class="text-2xl font-bold text-gray-900 mb-1">Sending emails</h2>
-          <p class="text-gray-400 text-sm" id="sending-subtitle">Triggering AI generation...</p>
+          <h2 class="text-2xl font-medium mb-1">Sending emails</h2>
+          <p class="text-sm" style="color:var(--ink-500);" id="sending-subtitle">Triggering AI generation...</p>
         </div>
         <div id="sending-list" class="space-y-3"></div>
-        <div id="all-done-msg" class="hidden mt-8 bg-green-50 border border-green-200 rounded-2xl p-5 text-center">
-          <div class="text-3xl mb-2">✅</div>
-          <p class="font-bold text-green-800">All done!</p>
-          <p class="text-green-600 text-sm mt-1">Check your Slack DMs — emails are on their way.</p>
-          <button onclick="goTo(0); resetState();" class="btn-primary mt-4 px-6 py-2.5 text-sm">Start over</button>
+        <div id="all-done-msg" class="hidden mt-8 rounded-xl p-6 text-center" style="background:#F0FBF9;border:1px solid #A7E3D8;">
+          <div class="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-3" style="background:#2E8B7B;">
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="white" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
+          </div>
+          <p class="font-medium" style="color:#1A5C52;">All done</p>
+          <p class="text-sm mt-1" style="color:#2E8B7B;">Check your Slack DMs — emails are on their way.</p>
+          <button onclick="goTo(0); resetState();" class="btn-primary mt-5 px-6 py-2.5 text-sm">Start over</button>
         </div>
       </div>
     </div>
@@ -588,10 +620,10 @@ function renderDeals(filterLabel) {
           <span class="date-badge text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap flex-shrink-0">${formatDate(d.date)}</span>
         </div>
         <div class="flex flex-wrap gap-2 mt-2">
-          ${d.owner    ? `<span class="${ownerColor(d.owner)} text-xs px-2.5 py-0.5 rounded-full font-medium">${escHtml(d.owner)}</span>` : ''}
-          ${d.market   ? `<span class="bg-gray-100 text-gray-600 text-xs px-2.5 py-0.5 rounded-full font-medium">${escHtml(d.market)}</span>` : ''}
-          ${d.industry ? `<span class="bg-blue-50 text-blue-600 text-xs px-2.5 py-0.5 rounded-full font-medium">${escHtml(d.industry)}</span>` : ''}
-          ${d.amount   ? `<span class="bg-green-50 text-green-700 text-xs px-2.5 py-0.5 rounded-full font-medium">${formatAmount(d.amount)}</span>` : ''}
+          ${d.owner    ? `<span style="${ownerColor(d.owner)};font-size:11px;font-weight:500;padding:3px 10px;border-radius:12px;">${escHtml(d.owner)}</span>` : ''}
+          ${d.market   ? `<span style="background:var(--ink-50);color:var(--ink-500);font-size:11px;font-weight:500;padding:3px 10px;border-radius:12px;">${escHtml(d.market)}</span>` : ''}
+          ${d.industry ? `<span style="background:#EEF3FF;color:#3B5BDB;font-size:11px;font-weight:500;padding:3px 10px;border-radius:12px;">${escHtml(d.industry)}</span>` : ''}
+          ${d.amount   ? `<span style="background:#E4F5F1;color:#206B5F;font-size:11px;font-weight:500;padding:3px 10px;border-radius:12px;">${formatAmount(d.amount)}</span>` : ''}
         </div>
       </div>
     </div>`).join('');
@@ -600,7 +632,12 @@ function renderDeals(filterLabel) {
 }
 
 function ownerColor(name) {
-  const palette = ['bg-purple-100 text-purple-700','bg-pink-100 text-pink-700','bg-indigo-100 text-indigo-700','bg-teal-100 text-teal-700'];
+  const palette = [
+    'background:#E4F5F1;color:#206B5F',
+    'background:#FFE8D6;color:#B15A1E',
+    'background:#FFF6D9;color:#8A6D0F',
+    'background:#E4F5EE;color:#1A6B52',
+  ];
   return palette[(name.charCodeAt(0)||0) % palette.length];
 }
 
@@ -848,7 +885,7 @@ function startMrrPacman() {
     const m = pac.mouth * Math.PI;
     ctx.save(); ctx.translate(pac.x, pac.y); ctx.rotate(facing);
     ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,PAC_R,m,Math.PI*2-m); ctx.closePath();
-    ctx.fillStyle = '#ff4d00'; ctx.fill(); ctx.restore();
+    ctx.fillStyle = '#FF355E'; ctx.fill(); ctx.restore();
   }
 
   function tick() {
