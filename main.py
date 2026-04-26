@@ -71,7 +71,8 @@ def _process_deal(hs: HubSpotClient, deal: dict):
         return
 
     print("[→] Sending to Slack...")
-    notifier.send_email_and_recap(deal, email, recap)
+    owner_email = context.get("owner", {}).get("email")
+    notifier.send_email_and_recap(deal, email, recap, owner_email=owner_email)
     print("[✓] Done.")
 
 
