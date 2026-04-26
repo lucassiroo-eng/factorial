@@ -57,12 +57,22 @@ class HubSpotClient:
         results = resp.json().get("results", [])
         return results[0] if results else None
 
-    def get_all_future_deals(self, filter_type: str, filter_value: str) -> list:
-        """Devuelve todos los deals futuros (desde mañana) para el filtro dado."""
-        tomorrow_ms = str(_date_to_ms(date.today() + timedelta(days=1)))
+    def get_all_future_deals(self, filter_type: str, filter_value: str, target_date: date | None = None) -> list:
+        """Devuelve todos los deals para target_date (o desde mañana si no se indica)."""
+        if target_date:
+            lower_ms = str(_date_to_ms(target_date))
+            upper_ms = str(_date_to_ms(target_date + timedelta(days=1)))
+            date_filters = [
+                {"propertyName": "first_meeting_at", "operator": "GTE", "value": lower_ms},
+                {"propertyName": "first_meeting_at", "operator": "LT",  "value": upper_ms},
+            ]
+        else:
+            date_filters = [
+                {"propertyName": "first_meeting_at", "operator": "GTE", "value": str(_date_to_ms(date.today() + timedelta(days=1)))},
+            ]
 
         base_filters = [
-            {"propertyName": "first_meeting_at", "operator": "GTE", "value": tomorrow_ms},
+            *date_filters,
             {"propertyName": "pipeline", "operator": "EQ", "value": PIPELINE_IDS["partners distribution"]},
             {"propertyName": DEMO_HELD_PROP, "operator": "NOT_HAS_PROPERTY"},
             _build_filter(filter_type, filter_value),

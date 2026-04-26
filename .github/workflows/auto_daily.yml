@@ -1,16 +1,20 @@
-name: Auto Demo Prep — France (lunes)
+name: Auto Demo Prep — France (diario)
+
+# Lunes-jueves: demos del día siguiente
+# Viernes: demos del lunes (--next-business-day lo calcula solo)
+# Sábado y domingo: no corre
 
 on:
   schedule:
-    - cron: '0 7 * * 1'   # Lunes 07:00 UTC = 08:00/09:00 París
-  workflow_dispatch: {}    # Trigger manual para testear
+    - cron: '0 7 * * 1-5'   # Lun-Vie 07:00 UTC = 08:00/09:00 París
+  workflow_dispatch: {}      # Trigger manual para testear
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  france-demo-prep:
-    name: "France — generar mails y recaps"
+  daily-france-prep:
+    name: "France — demos del día siguiente"
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -26,17 +30,17 @@ jobs:
       - name: Instalar dependencias
         run: pip install uv && uv pip install -r requirements.txt --system
 
-      - name: Ejecutar prep France → Slack de Lucas
+      - name: Ejecutar prep France
         env:
           HUBSPOT_API_KEY: ${{ secrets.HUBSPOT_API_KEY }}
           GROQ_API_KEY:    ${{ secrets.GROQ_API_KEY }}
           SLACK_TOKEN:     ${{ secrets.SLACK_TOKEN }}
           SLACK_USER_ID:   ${{ secrets.SLACK_USER_ID }}
-        run: python main.py --market France --all --send-to-me
+        run: python main.py --market France --all --next-business-day
 
-      - name: Resultado
+      - name: OK
         if: success()
-        run: echo "✅ Todos los mails de France enviados al Slack de Lucas."
+        run: echo "✅ Mails France enviados a cada AE."
 
       - name: Error
         if: failure()

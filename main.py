@@ -2,12 +2,13 @@
 Uso:
   python main.py --owner 86688154
   python main.py --market France
-  python main.py --market France --all          # todos los deals futuros
-  python main.py --market France --all --send-to-me  # envía al SLACK_USER_ID (pilot)
+  python main.py --market France --all                   # todos los deals futuros
+  python main.py --market France --all --next-business-day  # demos del próximo día laborable
   python main.py --deal-id 12345678
 """
 import argparse
 import os
+from datetime import date, timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -41,14 +42,20 @@ def run(filter_type: str, filter_value: str, send_to_me: bool = False):
     _process_deal(hs, deal, send_to_me=send_to_me)
 
 
-def run_all(filter_type: str, filter_value: str, send_to_me: bool = False):
+def _next_business_day() -> date:
+    today = date.today()
+    return today + timedelta(days=3 if today.weekday() == 4 else 1)  # viernes → lunes
+
+
+def run_all(filter_type: str, filter_value: str, send_to_me: bool = False, target_date: date | None = None):
     hs = HubSpotClient()
     filter_value = _resolve_owner_id(hs, filter_type, filter_value)
 
-    print(f"[→] Buscando todos los deals futuros ({filter_type}={filter_value})...")
-    all_deals = hs.get_all_future_deals(filter_type, filter_value)
+    label = target_date.isoformat() if target_date else "futuro"
+    print(f"[→] Buscando deals para {label} ({filter_type}={filter_value})...")
+    all_deals = hs.get_all_future_deals(filter_type, filter_value, target_date=target_date)
     if not all_deals:
-        print("[!] No hay deals con first_meeting_at futura para este filtro.")
+        print(f"[!] No hay deals para {label}.")
         return
     print(f"[✓] {len(all_deals)} deal(s) encontrado(s). Procesando...")
     for deal in all_deals:
@@ -95,14 +102,17 @@ if __name__ == "__main__":
     group.add_argument("--owner",   help="HubSpot owner ID or name")
     group.add_argument("--market",  help="Market value (e.g. France)")
     group.add_argument("--deal-id", help="Process a specific deal by HubSpot ID")
-    parser.add_argument("--all",        action="store_true", help="Process all future deals (not just the next one)")
-    parser.add_argument("--send-to-me", action="store_true", help="Force sending to SLACK_USER_ID instead of each deal's AE")
+    parser.add_argument("--all",               action="store_true", help="Process all future deals (not just the next one)")
+    parser.add_argument("--next-business-day", action="store_true", help="Filter for the next business day (Fri→Mon)")
+    parser.add_argument("--send-to-me",        action="store_true", help="Force sending to SLACK_USER_ID instead of each deal's AE")
     args = parser.parse_args()
+
+    target = _next_business_day() if args.next_business_day else None
 
     if args.deal_id:
         run_by_id(args.deal_id, send_to_me=args.send_to_me)
     elif args.all:
-        run_all("owner" if args.owner else "market", args.owner or args.market, send_to_me=args.send_to_me)
+        run_all("owner" if args.owner else "market", args.owner or args.market, send_to_me=args.send_to_me, target_date=target)
     elif args.owner:
         run("owner", args.owner, send_to_me=args.send_to_me)
     else:
