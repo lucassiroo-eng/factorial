@@ -144,19 +144,25 @@
       </div>
       <div class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Proxy URL</label>
-          <input id="proxy-url-input" type="text" placeholder="https://demo-prep-proxy.YOUR-NAME.workers.dev"
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">HubSpot Private App Token</label>
+          <input id="hs-token-input" type="password" placeholder="pat-na1-xxxx..."
             class="w-full rounded-xl px-4 py-2.5 text-sm bg-gray-50" />
-          <p class="text-xs text-gray-400 mt-1">Cloudflare Worker that proxies HubSpot — see <code class="bg-gray-100 px-1 rounded">worker/proxy.js</code> in the repo</p>
+          <p class="text-xs text-gray-400 mt-1">Stays in your browser — never sent to anyone except HubSpot</p>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Proxy URL</label>
+          <input id="proxy-url-input" type="text" placeholder="https://hs-relay.YOUR-NAME.workers.dev"
+            class="w-full rounded-xl px-4 py-2.5 text-sm bg-gray-50" />
+          <p class="text-xs text-gray-400 mt-1">Cloudflare Worker CORS relay — no secrets stored there, see <code class="bg-gray-100 px-1 rounded">worker/proxy.js</code></p>
         </div>
         <div>
           <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">GitHub Personal Access Token</label>
           <input id="gh-token-input" type="password" placeholder="ghp_xxxx..."
             class="w-full rounded-xl px-4 py-2.5 text-sm bg-gray-50" />
-          <p class="text-xs text-gray-400 mt-1">Needs <code class="bg-gray-100 px-1 rounded">workflow</code> + <code class="bg-gray-100 px-1 rounded">repo</code> scopes — used to send to Slack</p>
+          <p class="text-xs text-gray-400 mt-1">Needs <code class="bg-gray-100 px-1 rounded">workflow</code> + <code class="bg-gray-100 px-1 rounded">repo</code> scopes — used to trigger Slack send</p>
         </div>
       </div>
-      <p class="text-xs text-gray-400 mt-4">Stored in your browser only. HubSpot token lives in the Worker — never touches the browser.</p>
+      <p class="text-xs text-gray-400 mt-4">All tokens stored in your browser only.</p>
       <button onclick="saveSettings()" class="btn-primary w-full mt-5 py-3">Save & close</button>
     </div>
   </div>
@@ -376,8 +382,9 @@ const MARKETS = [
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
+let hsToken     = localStorage.getItem('hs_token')   || '';
 let proxyUrl    = (localStorage.getItem('proxy_url') || '').replace(/\/$/, '');
-let ghToken     = localStorage.getItem('gh_token') || '';
+let ghToken     = localStorage.getItem('gh_token')   || '';
 let mode        = null;
 let allOwners   = [];
 let ownerMap    = {};
@@ -388,6 +395,7 @@ let selectedDeal = new Set();
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   HS_BASE = proxyUrl;
+  document.getElementById('hs-token-input').value  = hsToken;
   document.getElementById('proxy-url-input').value = proxyUrl;
   document.getElementById('gh-token-input').value  = ghToken;
   populateMarketSelect();
@@ -395,15 +403,17 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
 function checkTokenWarning() {
-  document.getElementById('no-token-warning').classList.toggle('hidden', !!(proxyUrl && ghToken));
+  document.getElementById('no-token-warning').classList.toggle('hidden', !!(hsToken && proxyUrl && ghToken));
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 function openSettings()  { document.getElementById('settings-overlay').classList.remove('hidden'); }
 function closeSettings() { document.getElementById('settings-overlay').classList.add('hidden'); }
 function saveSettings()  {
+  hsToken  = document.getElementById('hs-token-input').value.trim();
   proxyUrl = document.getElementById('proxy-url-input').value.trim().replace(/\/$/, '');
   ghToken  = document.getElementById('gh-token-input').value.trim();
+  localStorage.setItem('hs_token',  hsToken);
   localStorage.setItem('proxy_url', proxyUrl);
   localStorage.setItem('gh_token',  ghToken);
   HS_BASE  = proxyUrl;
@@ -422,7 +432,7 @@ function goTo(n) {
 
 // ── Mode ──────────────────────────────────────────────────────────────────────
 function selectMode(m) {
-  if (!proxyUrl) { openSettings(); return; }
+  if (!hsToken || !proxyUrl) { openSettings(); return; }
   mode = m;
   document.getElementById('owner-config').classList.toggle('hidden', m !== 'owner');
   document.getElementById('market-config').classList.toggle('hidden', m !== 'market');
@@ -515,7 +525,7 @@ function onMarketChange() {
 
 // ── Search — direct HubSpot call (fast!) ──────────────────────────────────────
 async function searchDeals() {
-  if (!proxyUrl) { openSettings(); return; }
+  if (!hsToken || !proxyUrl) { openSettings(); return; }
 
   const ownerId     = chosenOwner?.id;
   const marketValue = document.getElementById('market-select').value;
@@ -769,7 +779,9 @@ function resetState() {
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 async function hsGet(path) {
-  const r = await fetch(HS_BASE + path);
+  const r = await fetch(HS_BASE + path, {
+    headers: { Authorization: `Bearer ${hsToken}` },
+  });
   if (!r.ok) throw new Error(`HubSpot ${r.status}: ${await r.text()}`);
   return r.json();
 }
@@ -777,7 +789,7 @@ async function hsGet(path) {
 async function hsPost(path, body) {
   const r = await fetch(HS_BASE + path, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { Authorization: `Bearer ${hsToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
   if (!r.ok) throw new Error(`HubSpot ${r.status}: ${await r.text()}`);
