@@ -80,55 +80,9 @@
 
     .date-badge { background:#fff5f2; color:#c2410c; border:1px solid #fed7aa; }
 
-    /* Pacman */
-    .pac-wrap { position:relative; height:52px; overflow:hidden; }
-    .pac-man {
-      position:absolute; left:0; top:50%; transform:translateY(-50%);
-      width:40px; height:40px; background:#ff4d00; border-radius:50%;
-      z-index:2;
-      animation: pac-move 1.8s linear infinite, pac-chomp .22s ease-in-out infinite alternate;
-    }
-    @keyframes pac-move { 0% { left:0; } 100% { left:calc(100% - 40px); } }
-    @keyframes pac-chomp {
-      from { clip-path:polygon(50% 50%, 100% 18%, 100% 0, 0 0, 0 100%, 100% 100%, 100% 82%); }
-      to   { clip-path:polygon(50% 50%, 100% 46%, 100% 0, 0 0, 0 100%, 100% 100%, 100% 54%); }
-    }
-    .pac-dot {
-      position:absolute; top:50%; transform:translateY(-50%);
-      width:9px; height:9px; background:#ffb347; border-radius:50%;
-      z-index:1;
-    }
-    /* Each dot disappears when pacman's centre reaches its left position.
-       Pacman travels over 1.8s; centre offset = 20px. For a dot at X%:
-       eat_pct ≈ (X% − 20px) / (container − 40px). Approximated at 600px wide. */
-    /* Dot positions + eat animations synced to pacman's centre reaching each dot.
-       Container ≈576px, pacman centre travels 20px→556px in 1.8s.
-       eat pct = (dot_px − 20) / 536 × 100 */
-    .pac-dot:nth-child(2) { left:18%; animation: eat18 1.8s linear infinite; }
-    .pac-dot:nth-child(3) { left:33%; animation: eat33 1.8s linear infinite; }
-    .pac-dot:nth-child(4) { left:50%; animation: eat50 1.8s linear infinite; }
-    .pac-dot:nth-child(5) { left:67%; animation: eat67 1.8s linear infinite; }
-    .pac-dot:nth-child(6) { left:82%; animation: eat82 1.8s linear infinite; }
-    @keyframes eat18 {
-      0%,14%  { opacity:1; transform:translateY(-50%) scale(1); }
-      19%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
-    }
-    @keyframes eat33 {
-      0%,30%  { opacity:1; transform:translateY(-50%) scale(1); }
-      35%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
-    }
-    @keyframes eat50 {
-      0%,47%  { opacity:1; transform:translateY(-50%) scale(1); }
-      52%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
-    }
-    @keyframes eat67 {
-      0%,65%  { opacity:1; transform:translateY(-50%) scale(1); }
-      70%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
-    }
-    @keyframes eat82 {
-      0%,82%  { opacity:1; transform:translateY(-50%) scale(1); }
-      87%,100%{ opacity:0; transform:translateY(-50%) scale(0); }
-    }
+    /* Search spinner */
+    .search-spinner { width:40px; height:40px; border-radius:50%; border:3px solid #ffe8e0; border-top-color:#ff4d00; animation:spin .8s linear infinite; margin:0 auto; }
+    @keyframes spin { to { transform:rotate(360deg); } }
   </style>
 </head>
 <body class="min-h-screen">
@@ -185,7 +139,10 @@
     </div>
   </div>
 
-  <div class="max-w-2xl mx-auto px-4 pb-20">
+  <!-- Full-screen MRR pacman canvas (shown during Slack send) -->
+  <canvas id="pac-canvas" style="display:none;position:fixed;inset:0;z-index:1;pointer-events:none;"></canvas>
+
+  <div class="max-w-2xl mx-auto px-4 pb-20" style="position:relative;z-index:2;">
 
     <!-- ── STEP 0: Landing ──────────────────────── -->
     <div id="step-0" class="step active fade-in">
@@ -246,6 +203,10 @@
             </div>
           </div>
           <div id="owner-dropdown" class="owner-dropdown hidden mt-2 p-1.5"></div>
+          <div id="owner-load-error" class="hidden mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs text-center">
+            Could not load owners — check your HubSpot token &amp; proxy URL.
+            <button onclick="allOwners=[];ownerMap={};loadOwners()" class="underline ml-1 font-semibold">Retry</button>
+          </div>
 
           <div id="owner-selected-box" class="hidden mt-4 bg-orange-50 border border-orange-200 rounded-2xl px-4 py-3 flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -291,15 +252,8 @@
         <!-- Loading -->
         <div id="search-loading" class="hidden">
           <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 text-center">
-            <div class="pac-wrap mb-4" id="pac-stage">
-              <div class="pac-man"></div>
-              <div class="pac-dot"></div>
-              <div class="pac-dot"></div>
-              <div class="pac-dot"></div>
-              <div class="pac-dot"></div>
-              <div class="pac-dot"></div>
-            </div>
-            <p class="text-gray-500 text-sm mt-2" id="search-status-text">Searching HubSpot...</p>
+            <div class="search-spinner mb-4"></div>
+            <p class="text-gray-500 text-sm" id="search-status-text">Searching HubSpot...</p>
           </div>
         </div>
 
@@ -423,6 +377,7 @@ function saveSettings()  {
 
 // ── Navigation ────────────────────────────────────────────────────────────────
 function goTo(n) {
+  if (n !== 3) stopMrrPacman();
   document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
   const el = document.getElementById(`step-${n}`);
   el.classList.add('active');
@@ -445,21 +400,29 @@ function selectMode(m) {
 async function loadOwners() {
   if (allOwners.length) return;
   document.getElementById('owner-loading').classList.remove('hidden');
+  document.getElementById('owner-load-error').classList.add('hidden');
   try {
     const data = await hsGet('/crm/v3/owners?limit=100');
     allOwners = (data.results || []).map(o => ({
       id:    String(o.id),
-      name:  `${o.firstName||''} ${o.lastName||''}`.trim(),
+      name:  (`${o.firstName||''} ${o.lastName||''}`).trim() || o.email || '',
       email: o.email || '',
-    }));
+    })).filter(o => o.name);
     ownerMap = Object.fromEntries(allOwners.map(o => [o.id, o]));
-  } catch (e) { console.warn('Could not load owners:', e); }
-  document.getElementById('owner-loading').classList.add('hidden');
+  } catch (e) {
+    document.getElementById('owner-load-error').classList.remove('hidden');
+  } finally {
+    document.getElementById('owner-loading').classList.add('hidden');
+  }
 }
 
 function filterOwners(q) {
   const box = document.getElementById('owner-dropdown');
   if (!q.trim()) { box.classList.add('hidden'); return; }
+  if (!allOwners.length) {
+    box.innerHTML = '<p class="text-gray-400 text-sm px-3 py-2 italic">Loading owners…</p>';
+    box.classList.remove('hidden'); return;
+  }
   const matches = allOwners.filter(o => o.name.toLowerCase().includes(q.toLowerCase())).slice(0, 8);
   if (!matches.length) {
     box.innerHTML = '<p class="text-gray-400 text-sm px-3 py-2">No results</p>';
@@ -675,6 +638,7 @@ async function startSending() {
   if (!ghToken) { openSettings(); return; }
   const toSend = deals.filter(d => selectedDeal.has(d.id));
   goTo(3);
+  startMrrPacman();
   document.getElementById('all-done-msg').classList.add('hidden');
   document.getElementById('sending-subtitle').textContent =
     `Sending ${toSend.length} deal${toSend.length > 1 ? 's' : ''} to AI...`;
@@ -764,6 +728,7 @@ function setItem(dealId, state, text) {
 }
 
 function showAllDone() {
+  stopMrrPacman();
   document.getElementById('all-done-msg').classList.remove('hidden');
   document.getElementById('sending-subtitle').textContent = 'All triggered! Check your Slack DMs.';
 }
@@ -840,6 +805,90 @@ function escHtml(s) {
 }
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ── MRR Pacman — full-screen canvas during Slack send ────────────────────────
+let _pacRaf = null;
+
+function startMrrPacman() {
+  const canvas = document.getElementById('pac-canvas');
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  canvas.style.display = 'block';
+  const ctx = canvas.getContext('2d');
+
+  const PAC_R = 22, BALL_R = 17, SPEED = 2.6;
+
+  const a0 = Math.random() * Math.PI * 2;
+  const pac = { x: canvas.width/2, y: canvas.height/2,
+                vx: Math.cos(a0)*SPEED, vy: Math.sin(a0)*SPEED,
+                mouth: 0.15, mdir: 1 };
+
+  function spawnBalls() {
+    return Array.from({length: 14}, () => ({
+      x: BALL_R*2 + Math.random()*(canvas.width  - BALL_R*4),
+      y: BALL_R*2 + Math.random()*(canvas.height - BALL_R*4),
+      alive: true,
+    }));
+  }
+  let balls = spawnBalls();
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // MRR balls
+    balls.forEach(b => {
+      if (!b.alive) return;
+      ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R, 0, Math.PI*2);
+      ctx.fillStyle = '#22c55e'; ctx.fill();
+      ctx.font = 'bold 8px Inter,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#fff'; ctx.fillText('MRR', b.x, b.y);
+    });
+    // Pacman
+    const facing = Math.atan2(pac.vy, pac.vx);
+    const m = pac.mouth * Math.PI;
+    ctx.save(); ctx.translate(pac.x, pac.y); ctx.rotate(facing);
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.arc(0,0,PAC_R,m,Math.PI*2-m); ctx.closePath();
+    ctx.fillStyle = '#ff4d00'; ctx.fill(); ctx.restore();
+  }
+
+  function tick() {
+    pac.x += pac.vx; pac.y += pac.vy;
+    // Bounce off edges with tiny random nudge
+    if (pac.x - PAC_R < 0)             { pac.x = PAC_R;               pac.vx =  Math.abs(pac.vx); pac.vy += (Math.random()-.5)*.8; }
+    if (pac.x + PAC_R > canvas.width)  { pac.x = canvas.width-PAC_R;  pac.vx = -Math.abs(pac.vx); pac.vy += (Math.random()-.5)*.8; }
+    if (pac.y - PAC_R < 0)             { pac.y = PAC_R;               pac.vy =  Math.abs(pac.vy); pac.vx += (Math.random()-.5)*.8; }
+    if (pac.y + PAC_R > canvas.height) { pac.y = canvas.height-PAC_R; pac.vy = -Math.abs(pac.vy); pac.vx += (Math.random()-.5)*.8; }
+    // Keep speed constant
+    const spd = Math.sqrt(pac.vx*pac.vx + pac.vy*pac.vy);
+    if (spd) { pac.vx = pac.vx/spd*SPEED; pac.vy = pac.vy/spd*SPEED; }
+    // Chomp
+    pac.mouth += .045 * pac.mdir;
+    if (pac.mouth >= .28) pac.mdir = -1;
+    if (pac.mouth <= .02) pac.mdir =  1;
+    // Eat MRR balls
+    balls.forEach(b => {
+      if (!b.alive) return;
+      const dx=pac.x-b.x, dy=pac.y-b.y;
+      if (Math.sqrt(dx*dx+dy*dy) < PAC_R+BALL_R) b.alive = false;
+    });
+    if (!balls.some(b=>b.alive)) balls = spawnBalls();
+    draw();
+    _pacRaf = requestAnimationFrame(tick);
+  }
+  _pacRaf = requestAnimationFrame(tick);
+}
+
+function stopMrrPacman() {
+  if (_pacRaf) { cancelAnimationFrame(_pacRaf); _pacRaf = null; }
+  const c = document.getElementById('pac-canvas');
+  if (c) { c.style.display='none'; c.getContext('2d').clearRect(0,0,c.width,c.height); }
+}
+
+window.addEventListener('resize', () => {
+  if (!_pacRaf) return;
+  const c = document.getElementById('pac-canvas');
+  c.width = window.innerWidth; c.height = window.innerHeight;
+});
 </script>
 </body>
 </html>
