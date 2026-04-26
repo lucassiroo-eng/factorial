@@ -30,6 +30,12 @@ on:
         type: string
         default: ""
 
+      recipient_email:
+        description: "Slack recipient email (overrides deal owner routing)"
+        required: false
+        type: string
+        default: ""
+
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -72,12 +78,14 @@ jobs:
         run: |
           DEAL_ID="${{ github.event.inputs.deal_id }}"
           TYPE="${{ github.event.inputs.filter_type }}"
+          RECIPIENT="${{ github.event.inputs.recipient_email }}"
+          EXTRA=${RECIPIENT:+--recipient-email "$RECIPIENT"}
           if [ -n "$DEAL_ID" ]; then
-            python main.py --deal-id "$DEAL_ID"
+            python main.py --deal-id "$DEAL_ID" $EXTRA
           elif [ "$TYPE" = "owner" ]; then
-            python main.py --owner "${{ github.event.inputs.owner_id }}"
+            python main.py --owner "${{ github.event.inputs.owner_id }}" $EXTRA
           else
-            python main.py --market "${{ github.event.inputs.market_value }}"
+            python main.py --market "${{ github.event.inputs.market_value }}" $EXTRA
           fi
 
       - name: ✅ Resultado

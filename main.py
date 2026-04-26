@@ -30,7 +30,7 @@ def _resolve_owner_id(hs: HubSpotClient, filter_type: str, filter_value: str) ->
     return filter_value
 
 
-def run(filter_type: str, filter_value: str, send_to_me: bool = False):
+def run(filter_type: str, filter_value: str, send_to_me: bool = False, recipient_email: str | None = None):
     hs = HubSpotClient()
     filter_value = _resolve_owner_id(hs, filter_type, filter_value)
 
@@ -39,7 +39,7 @@ def run(filter_type: str, filter_value: str, send_to_me: bool = False):
     if not deal:
         print("[!] No hay deals con first_meeting_at futura para este filtro.")
         return
-    _process_deal(hs, deal, send_to_me=send_to_me)
+    _process_deal(hs, deal, send_to_me=send_to_me, recipient_email=recipient_email)
 
 
 def _next_business_day() -> date:
@@ -62,17 +62,17 @@ def run_all(filter_type: str, filter_value: str, send_to_me: bool = False, targe
         _process_deal(hs, deal, send_to_me=send_to_me)
 
 
-def run_by_id(deal_id: str, send_to_me: bool = False):
+def run_by_id(deal_id: str, send_to_me: bool = False, recipient_email: str | None = None):
     hs = HubSpotClient()
     print(f"[→] Fetching deal {deal_id}...")
     deal = hs.get_deal_by_id(deal_id)
     if not deal:
         print(f"[!] Deal {deal_id} not found.")
         return
-    _process_deal(hs, deal, send_to_me=send_to_me)
+    _process_deal(hs, deal, send_to_me=send_to_me, recipient_email=recipient_email)
 
 
-def _process_deal(hs: HubSpotClient, deal: dict, send_to_me: bool = False):
+def _process_deal(hs: HubSpotClient, deal: dict, send_to_me: bool = False, recipient_email: str | None = None):
     props   = deal.get("properties", {})
     name    = props.get("dealname", deal["id"])
     meeting = props.get("first_meeting_at", "?")
@@ -91,8 +91,13 @@ def _process_deal(hs: HubSpotClient, deal: dict, send_to_me: bool = False):
         return
 
     print("[→] Sending to Slack...")
-    owner_email = None if send_to_me else context.get("owner", {}).get("email")
-    notifier.send_email_and_recap(deal, email, recap, owner_email=owner_email)
+    if recipient_email:
+        effective_email = recipient_email
+    elif send_to_me:
+        effective_email = None  # falls back to SLACK_USER_ID
+    else:
+        effective_email = context.get("owner", {}).get("email")
+    notifier.send_email_and_recap(deal, email, recap, owner_email=effective_email)
     print("[✓] Done.")
 
 
@@ -104,16 +109,18 @@ if __name__ == "__main__":
     group.add_argument("--deal-id", help="Process a specific deal by HubSpot ID")
     parser.add_argument("--all",               action="store_true", help="Process all future deals (not just the next one)")
     parser.add_argument("--next-business-day", action="store_true", help="Filter for the next business day (Fri→Mon)")
-    parser.add_argument("--send-to-me",        action="store_true", help="Force sending to SLACK_USER_ID instead of each deal's AE")
+    parser.add_argument("--send-to-me",        action="store_true", help="Force sending to SLACK_USER_ID (auto flows)")
+    parser.add_argument("--recipient-email",   default=None,        help="Override Slack recipient by email (manual/web flows)")
     args = parser.parse_args()
 
     target = _next_business_day() if args.next_business_day else None
+    rec    = args.recipient_email or None
 
     if args.deal_id:
-        run_by_id(args.deal_id, send_to_me=args.send_to_me)
+        run_by_id(args.deal_id, send_to_me=args.send_to_me, recipient_email=rec)
     elif args.all:
         run_all("owner" if args.owner else "market", args.owner or args.market, send_to_me=args.send_to_me, target_date=target)
     elif args.owner:
-        run("owner", args.owner, send_to_me=args.send_to_me)
+        run("owner", args.owner, send_to_me=args.send_to_me, recipient_email=rec)
     else:
-        run("market", args.market, send_to_me=args.send_to_me)
+        run("market", args.market, send_to_me=args.send_to_me, recipient_email=rec)

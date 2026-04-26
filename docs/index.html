@@ -314,10 +314,35 @@
       </div>
 
       <!-- Sticky send bar -->
-      <div id="send-bar" class="hidden fixed bottom-0 left-0 right-0 p-4 z-30" style="background:rgba(250,250,252,.96);border-top:1px solid var(--border);backdrop-filter:blur(8px);">
-        <div class="max-w-2xl mx-auto">
-          <button onclick="startSending()"
-            class="btn-primary w-full py-4 flex items-center justify-center gap-2.5">
+      <div id="send-bar" class="hidden fixed bottom-0 left-0 right-0 z-30" style="background:rgba(250,250,252,.96);border-top:1px solid var(--border);backdrop-filter:blur(8px);">
+        <div class="max-w-2xl mx-auto p-4 space-y-2">
+
+          <!-- Recipient row -->
+          <div class="relative">
+            <!-- Selected state -->
+            <div id="recipient-selected" style="display:none;" class="items-center justify-between px-4 py-2.5 rounded-xl" style="background:var(--red-weak);border:1px solid #FFB3C6;">
+              <div class="flex items-center gap-2.5">
+                <span class="text-xs font-medium" style="color:var(--ink-400);">To</span>
+                <div id="recipient-avatar" class="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-semibold" style="background:var(--red);"></div>
+                <span id="recipient-name" class="text-sm font-semibold" style="color:var(--midnight);"></span>
+              </div>
+              <button onclick="clearRecipient()" class="text-lg leading-none px-1" style="color:var(--ink-400);">&times;</button>
+            </div>
+            <!-- Search state -->
+            <div id="recipient-input-wrap" class="flex items-center gap-3 bg-white rounded-xl px-4 py-2.5" style="border:1px solid var(--border);">
+              <span class="text-xs font-medium whitespace-nowrap" style="color:var(--ink-400);">To</span>
+              <input id="recipient-search" type="text" placeholder="Who should receive this?" autocomplete="off"
+                class="flex-1 text-sm bg-transparent border-none"
+                style="outline:none;color:var(--midnight);box-shadow:none;"
+                oninput="filterRecipient(this.value)" onfocus="showRecipientDropdown()" />
+            </div>
+            <!-- Dropdown (opens upward) -->
+            <div id="recipient-dropdown" class="owner-dropdown hidden absolute bottom-full mb-1 left-0 right-0 p-1.5"></div>
+          </div>
+
+          <!-- Send button -->
+          <button onclick="startSending()" id="send-action-btn" disabled
+            class="btn-primary w-full py-3.5 flex items-center justify-center gap-2.5">
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
             <span id="send-btn-label">Send to Slack</span>
           </button>
@@ -375,8 +400,9 @@ let mode        = null;
 let allOwners   = [];
 let ownerMap    = {};
 let chosenOwner = null;
-let deals       = [];
-let selectedDeal = new Set();
+let deals          = [];
+let selectedDeal   = new Set();
+let recipientOwner = null;
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
@@ -483,9 +509,11 @@ function selectOwner(id) {
   document.getElementById('owner-avatar').textContent =
     chosenOwner.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
   document.getElementById('search-btn').disabled = false;
+  if (!recipientOwner) selectRecipient(id); // auto-fill recipient
 }
 
 function clearOwner() {
+  if (recipientOwner?.id === chosenOwner?.id) clearRecipient();
   chosenOwner = null;
   document.getElementById('owner-selected-box').classList.add('hidden');
   document.getElementById('search-btn').disabled = true;
@@ -494,7 +522,56 @@ function clearOwner() {
 document.addEventListener('click', e => {
   if (!e.target.closest('#owner-search') && !e.target.closest('#owner-dropdown'))
     document.getElementById('owner-dropdown')?.classList.add('hidden');
+  if (!e.target.closest('#recipient-search') && !e.target.closest('#recipient-dropdown') && !e.target.closest('#recipient-input-wrap'))
+    document.getElementById('recipient-dropdown')?.classList.add('hidden');
 });
+
+// ── Recipient picker ──────────────────────────────────────────────────────────
+function filterRecipient(q) {
+  const box = document.getElementById('recipient-dropdown');
+  if (!q.trim()) { box.classList.add('hidden'); return; }
+  if (!allOwners.length) {
+    box.innerHTML = '<p class="text-gray-400 text-sm px-3 py-2 italic">Loading…</p>';
+    box.classList.remove('hidden'); return;
+  }
+  const matches = allOwners.filter(o => o.name.toLowerCase().includes(q.toLowerCase())).slice(0, 6);
+  if (!matches.length) {
+    box.innerHTML = '<p class="text-gray-400 text-sm px-3 py-2">No results</p>';
+    box.classList.remove('hidden'); return;
+  }
+  box.innerHTML = matches.map(o => `
+    <div class="owner-option" onclick="selectRecipient('${o.id}')">
+      <p class="font-medium text-gray-900 text-sm">${hl(o.name, q)}</p>
+      <p class="text-gray-400 text-xs">${o.email}</p>
+    </div>`).join('');
+  box.classList.remove('hidden');
+}
+
+function showRecipientDropdown() {
+  const q = document.getElementById('recipient-search').value;
+  if (q.trim()) filterRecipient(q);
+}
+
+function selectRecipient(id) {
+  recipientOwner = ownerMap[id];
+  if (!recipientOwner) return;
+  document.getElementById('recipient-dropdown').classList.add('hidden');
+  document.getElementById('recipient-search').value = '';
+  const initials = recipientOwner.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  document.getElementById('recipient-avatar').textContent = initials;
+  document.getElementById('recipient-name').textContent   = recipientOwner.name;
+  document.getElementById('recipient-selected').style.display  = 'flex';
+  document.getElementById('recipient-input-wrap').style.display = 'none';
+  updateSendBar();
+}
+
+function clearRecipient() {
+  recipientOwner = null;
+  document.getElementById('recipient-selected').style.display   = 'none';
+  document.getElementById('recipient-input-wrap').style.display = 'flex';
+  document.getElementById('recipient-search').value = '';
+  updateSendBar();
+}
 
 function hl(text, q) {
   const i = text.toLowerCase().indexOf(q.toLowerCase());
@@ -665,7 +742,8 @@ function updateSendBar() {
   const n = selectedDeal.size;
   document.getElementById('send-bar').classList.toggle('hidden', n === 0);
   document.getElementById('send-btn-label').textContent =
-    n === 1 ? 'Send to Slack (1 deal)' : `Send to Slack (${n} deals)`;
+    n === 1 ? 'Send to Slack' : `Send to Slack (${n} deals)`;
+  document.getElementById('send-action-btn').disabled = !recipientOwner;
   const btn = document.getElementById('select-all-btn');
   if (btn) btn.textContent = selectedDeal.size === deals.length ? 'Deselect all' : 'Select all';
 }
@@ -703,7 +781,7 @@ async function startSending() {
       setItem(deal.id, 'queued', 'Triggering...');
       await ghPost(`/repos/${GH_REPO}/actions/workflows/${SEND_WF}/dispatches`, {
         ref: 'main',
-        inputs: { deal_id: deal.id, filter_type: 'owner', owner_id: '', market_value: '' },
+        inputs: { deal_id: deal.id, filter_type: 'owner', owner_id: '', market_value: '', recipient_email: recipientOwner?.email || '' },
       });
       triggerTimes[deal.id] = Date.now();
       setItem(deal.id, 'queued', 'Queued ✓');
@@ -771,12 +849,15 @@ function showAllDone() {
 }
 
 function resetState() {
-  selectedDeal.clear(); deals = []; chosenOwner = null; mode = null;
+  selectedDeal.clear(); deals = []; chosenOwner = null; recipientOwner = null; mode = null;
   document.getElementById('send-bar').classList.add('hidden');
   document.getElementById('market-select').value = '';
   document.getElementById('owner-selected-box').classList.add('hidden');
   document.getElementById('owner-search').value = '';
   document.getElementById('search-btn').disabled = true;
+  document.getElementById('recipient-selected').style.display   = 'none';
+  document.getElementById('recipient-input-wrap').style.display = 'flex';
+  document.getElementById('recipient-search').value = '';
 }
 
 // ── API helpers ───────────────────────────────────────────────────────────────
