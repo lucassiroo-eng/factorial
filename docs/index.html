@@ -120,25 +120,13 @@
       </div>
       <div class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">HubSpot Private App Token</label>
-          <input id="hs-token-input" type="password" placeholder="pat-na1-xxxx..."
+          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Worker URL</label>
+          <input id="proxy-url-input" type="text" placeholder="https://feo.YOUR-NAME.workers.dev"
             class="w-full rounded-xl px-4 py-2.5 text-sm bg-gray-50" />
-          <p class="text-xs text-gray-400 mt-1">Stays in your browser — never sent to anyone except HubSpot</p>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">Proxy URL</label>
-          <input id="proxy-url-input" type="text" placeholder="https://hs-relay.YOUR-NAME.workers.dev"
-            class="w-full rounded-xl px-4 py-2.5 text-sm bg-gray-50" />
-          <p class="text-xs text-gray-400 mt-1">Cloudflare Worker CORS relay — no secrets stored there, see <code class="bg-gray-100 px-1 rounded">worker/proxy.js</code></p>
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1.5">GitHub Personal Access Token</label>
-          <input id="gh-token-input" type="password" placeholder="ghp_xxxx..."
-            class="w-full rounded-xl px-4 py-2.5 text-sm bg-gray-50" />
-          <p class="text-xs text-gray-400 mt-1">Needs <code class="bg-gray-100 px-1 rounded">workflow</code> + <code class="bg-gray-100 px-1 rounded">repo</code> scopes — used to trigger Slack send</p>
+          <p class="text-xs text-gray-400 mt-1">Cloudflare Worker URL — los secrets viven ahí, no en el browser</p>
         </div>
       </div>
-      <p class="text-xs text-gray-400 mt-4">All tokens stored in your browser only.</p>
+      <p class="text-xs text-gray-400 mt-4">Solo necesitas la URL del Worker. Sin tokens aquí.</p>
       <button onclick="saveSettings()" class="btn-primary w-full mt-5 py-3">Save & close</button>
     </div>
   </div>
@@ -395,9 +383,7 @@ const MARKETS = [
 ];
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let hsToken     = localStorage.getItem('hs_token')   || '';
 let proxyUrl    = (localStorage.getItem('proxy_url') || '').replace(/\/$/, '');
-let ghToken     = localStorage.getItem('gh_token')   || '';
 let mode        = null;
 let allOwners   = [];
 let ownerMap    = {};
@@ -409,27 +395,21 @@ let recipientOwner = null;
 // ── Init ──────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', () => {
   HS_BASE = proxyUrl;
-  document.getElementById('hs-token-input').value  = hsToken;
   document.getElementById('proxy-url-input').value = proxyUrl;
-  document.getElementById('gh-token-input').value  = ghToken;
   populateMarketSelect();
   checkTokenWarning();
 });
 
 function checkTokenWarning() {
-  document.getElementById('no-token-warning').classList.toggle('hidden', !!(hsToken && proxyUrl && ghToken));
+  document.getElementById('no-token-warning').classList.toggle('hidden', !!proxyUrl);
 }
 
 // ── Settings ──────────────────────────────────────────────────────────────────
 function openSettings()  { document.getElementById('settings-overlay').classList.remove('hidden'); }
 function closeSettings() { document.getElementById('settings-overlay').classList.add('hidden'); }
 function saveSettings()  {
-  hsToken  = document.getElementById('hs-token-input').value.trim();
   proxyUrl = document.getElementById('proxy-url-input').value.trim().replace(/\/$/, '');
-  ghToken  = document.getElementById('gh-token-input').value.trim();
-  localStorage.setItem('hs_token',  hsToken);
   localStorage.setItem('proxy_url', proxyUrl);
-  localStorage.setItem('gh_token',  ghToken);
   HS_BASE  = proxyUrl;
   closeSettings();
   checkTokenWarning();
@@ -447,7 +427,7 @@ function goTo(n) {
 
 // ── Mode ──────────────────────────────────────────────────────────────────────
 function selectMode(m) {
-  if (!hsToken || !proxyUrl) { openSettings(); return; }
+  if (!proxyUrl) { openSettings(); return; }
   mode = m;
   document.getElementById('owner-config').classList.toggle('hidden', m !== 'owner');
   document.getElementById('market-config').classList.toggle('hidden', m !== 'market');
@@ -646,7 +626,7 @@ function onMarketChange() {
 
 // ── Search — direct HubSpot call (fast!) ──────────────────────────────────────
 async function searchDeals() {
-  if (!hsToken || !proxyUrl) { openSettings(); return; }
+  if (!proxyUrl) { openSettings(); return; }
 
   const ownerId     = chosenOwner?.id;
   const marketValue = document.getElementById('market-select').value;
@@ -799,7 +779,7 @@ function updateSendBar() {
 
 // ── Send (still uses GitHub Actions — async → Slack) ─────────────────────────
 async function startSending() {
-  if (!ghToken) { openSettings(); return; }
+  if (!proxyUrl) { openSettings(); return; }
   const toSend = deals.filter(d => selectedDeal.has(d.id));
   goTo(3);
   startMrrPacman();
@@ -911,9 +891,7 @@ function resetState() {
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 async function hsGet(path) {
-  const r = await fetch(HS_BASE + path, {
-    headers: { Authorization: `Bearer ${hsToken}` },
-  });
+  const r = await fetch(HS_BASE + path);
   if (!r.ok) throw new Error(`HubSpot ${r.status}: ${await r.text()}`);
   return r.json();
 }
@@ -921,7 +899,7 @@ async function hsGet(path) {
 async function hsPost(path, body) {
   const r = await fetch(HS_BASE + path, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${hsToken}`, 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
   if (!r.ok) throw new Error(`HubSpot ${r.status}: ${await r.text()}`);
@@ -929,17 +907,15 @@ async function hsPost(path, body) {
 }
 
 async function ghGet(path) {
-  const r = await fetch('https://api.github.com' + path, {
-    headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json' },
-  });
+  const r = await fetch(HS_BASE + '/gh' + path);
   if (!r.ok) throw new Error(`GitHub ${r.status}`);
   return r.json();
 }
 
 async function ghPost(path, body) {
-  const r = await fetch('https://api.github.com' + path, {
+  const r = await fetch(HS_BASE + '/gh' + path, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${ghToken}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });
   if (!r.ok) throw new Error(`GitHub ${r.status}: ${await r.text()}`);
