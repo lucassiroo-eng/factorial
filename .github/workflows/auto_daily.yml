@@ -33,7 +33,9 @@ jobs:
       - name: Ejecutar prep France
         env:
           HUBSPOT_API_KEY: ${{ secrets.HUBSPOT_API_KEY }}
-          AZURE_ANTHROPIC_API_KEY: ${{ secrets.AZURE_ANTHROPIC_API_KEY }}
+          AZURE_ANTHROPIC_API_KEY:  ${{ secrets.AZURE_ANTHROPIC_API_KEY }}
+          AZURE_ANTHROPIC_ENDPOINT: ${{ secrets.AZURE_ANTHROPIC_ENDPOINT }}
+          AZURE_ANTHROPIC_MODEL:    ${{ secrets.AZURE_ANTHROPIC_MODEL }}
           SLACK_TOKEN:     ${{ secrets.SLACK_TOKEN }}
           SLACK_USER_ID:   ${{ secrets.SLACK_USER_ID }}
         run: python main.py --market France --all --next-business-day --send-to-me

@@ -2,22 +2,24 @@ import os
 import re
 import requests
 
-# ── Azure AI Foundry — Claude Opus 4.6 ───────────────────────────────────────
-_AZURE_ENDPOINT   = "https://partners-bizdev-ai.services.ai.azure.com"
-_AZURE_DEPLOYMENT = "claude-opus-4-6"
-_AZURE_API_VER    = "2025-01-01-preview"
+# ── Azure AI Foundry — config from env ───────────────────────────────────────
+_AZURE_API_VER = "2025-01-01-preview"
 
 
 def _call(prompt: str, max_tokens: int = 4000) -> str:
+    endpoint = os.environ["AZURE_ANTHROPIC_ENDPOINT"].rstrip("/")
+    model    = os.environ["AZURE_ANTHROPIC_MODEL"]
+    api_key  = os.environ["AZURE_ANTHROPIC_API_KEY"]
+
     resp = requests.post(
-        f"{_AZURE_ENDPOINT}/anthropic/v1/messages?api-version={_AZURE_API_VER}",
+        f"{endpoint}/anthropic/v1/messages?api-version={_AZURE_API_VER}",
         headers={
-            "api-key":           os.environ["AZURE_ANTHROPIC_API_KEY"],
+            "api-key":           api_key,
             "Content-Type":      "application/json",
             "anthropic-version": "2023-06-01",
         },
         json={
-            "model":      _AZURE_DEPLOYMENT,
+            "model":      model,
             "max_tokens": max_tokens,
             "messages":   [{"role": "user", "content": prompt}],
         },
