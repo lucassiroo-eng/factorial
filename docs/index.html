@@ -574,8 +574,31 @@ function selectRecipientByEmail(email) {
 }
 
 function showRecipientDropdown() {
-  const q = document.getElementById('recipient-search').value;
-  if (q.trim()) filterRecipient(q);
+  const q = document.getElementById('recipient-search').value.trim();
+  if (q) { filterRecipient(q); return; }
+  const box = document.getElementById('recipient-dropdown');
+  const ownerRows = allOwners.slice(0, 5).map(o => `
+    <div class="owner-option" onclick="selectRecipient('${o.id}')">
+      <p class="font-medium text-sm" style="color:var(--midnight);">${escHtml(o.name)}</p>
+      <p class="text-xs" style="color:var(--ink-400);">${escHtml(o.email)}</p>
+    </div>`).join('');
+  box.innerHTML = ownerRows + `
+    <div class="owner-option" onclick="selectAdmin()" style="${ownerRows ? 'border-top:1px solid var(--border);margin-top:4px;padding-top:10px;' : ''}">
+      <p class="font-medium text-sm" style="color:var(--midnight);">Lucas Siroo</p>
+      <p class="text-xs" style="color:var(--ink-400);">Enviar a Admin</p>
+    </div>`;
+  box.classList.remove('hidden');
+}
+
+function selectAdmin() {
+  recipientOwner = { id: '__admin__', name: 'Lucas Siroo', email: 'lucas.siroo@factorial.co' };
+  document.getElementById('recipient-dropdown').classList.add('hidden');
+  document.getElementById('recipient-search').value = '';
+  document.getElementById('recipient-avatar').textContent = 'LS';
+  document.getElementById('recipient-name').textContent   = 'Lucas Siroo';
+  document.getElementById('recipient-selected').style.display   = 'flex';
+  document.getElementById('recipient-input-wrap').style.display = 'none';
+  updateSendBar();
 }
 
 function selectRecipient(id) {
