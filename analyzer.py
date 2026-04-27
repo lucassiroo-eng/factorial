@@ -1,19 +1,30 @@
 import os
 import re
-from groq import Groq
+import requests
 
-# ── Groq client ───────────────────────────────────────────────────────────────
-_client = Groq(api_key=os.environ.get("GROQ_API_KEY", ""))
-_MODEL  = os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile")
+# ── Azure AI Foundry — Claude Opus 4.6 ───────────────────────────────────────
+_AZURE_ENDPOINT   = "https://partners-bizdev-ai.services.ai.azure.com"
+_AZURE_DEPLOYMENT = "claude-opus-4-6"
+_AZURE_API_VER    = "2025-01-01-preview"
 
 
-def _call(prompt: str, max_tokens: int = 1200) -> str:
-    response = _client.chat.completions.create(
-        model=_MODEL,
-        max_tokens=max_tokens,
-        messages=[{"role": "user", "content": prompt}],
+def _call(prompt: str, max_tokens: int = 4000) -> str:
+    resp = requests.post(
+        f"{_AZURE_ENDPOINT}/anthropic/v1/messages?api-version={_AZURE_API_VER}",
+        headers={
+            "api-key":           os.environ["AZURE_API_KEY"],
+            "Content-Type":      "application/json",
+            "anthropic-version": "2023-06-01",
+        },
+        json={
+            "model":      _AZURE_DEPLOYMENT,
+            "max_tokens": max_tokens,
+            "messages":   [{"role": "user", "content": prompt}],
+        },
+        timeout=120,
     )
-    return response.choices[0].message.content.strip()
+    resp.raise_for_status()
+    return resp.json()["content"][0]["text"].strip()
 
 
 # ── Master prompt ─────────────────────────────────────────────────────────────
