@@ -667,7 +667,7 @@ async function searchDeals() {
         id:       d.id,
         name:     p.dealname    || '',
         date:     p.first_meeting_at || '',
-        owner:    ownerMap[oid]?.name || oid || '',
+        owner:    ownerMap[oid]?.name || ownerMap[oid]?.email || '',
         market:   p.country_qobra_samba || '',
         amount:   p.amount      || '',
         industry: p.industry    || '',
