@@ -159,13 +159,18 @@ class HubSpotClient:
     def get_deal_owner(self, owner_id: str) -> dict:
         if not owner_id:
             return _fallback_owner()
-        r = self._get(f"{HUBSPOT_BASE}/crm/v3/owners/{owner_id}")
-        if not r.ok:
-            print(f"[!] get_deal_owner failed ({r.status_code}) — using AE_NAME/AE_EMAIL fallback.")
-            return _fallback_owner()
-        data = r.json()
-        print(f"[✓] Owner: {data.get('firstName')} {data.get('lastName')} <{data.get('email')}>")
-        return data
+        # Try v3 first; fall back to legacy v2 which only needs contacts scope
+        for url in [
+            f"{HUBSPOT_BASE}/crm/v3/owners/{owner_id}",
+            f"{HUBSPOT_BASE}/owners/v2/owners/{owner_id}",
+        ]:
+            r = self._get(url)
+            if r.ok:
+                data = r.json()
+                print(f"[✓] Owner: {data.get('firstName')} {data.get('lastName')} <{data.get('email')}>")
+                return data
+        print(f"[!] get_deal_owner failed on both v3 and v2 — using AE_NAME/AE_EMAIL fallback.")
+        return _fallback_owner()
 
     def find_owner_by_name(self, name: str) -> dict | None:
         """Returns the owner whose full name matches (case-insensitive, partial ok)."""
