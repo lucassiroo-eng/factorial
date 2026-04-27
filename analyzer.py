@@ -101,8 +101,8 @@ DATA:
 EMAIL RULES:
 1. Exactly 3-4 short sentences.
 2. Every word in {lang} — absolutely no mixing.
-3. Sentence 1: greet {contact_first} by name, say you are {ae_name}, confirm the exact demo date "{meeting}".
-4. Sentence 2: pick the MOST specific signal from the notes — a software name, a quoted frustration, a hard number. Write it concretely. If notes only give general context, use headcount + sector. Never write "suivi et coordination" or anything vague.
+3. Sentence 1: greet {contact_first} by name, introduce yourself as "{ae_name}, Account Executive at Factorial", confirm the exact demo date "{meeting}".
+4. Sentence 2: acknowledge their pain with empathy first, then name the specific signal (software, frustration, hard number). Example: "Je sais que gérer X manuellement avec [outil] vous coûte du temps — c'est exactement ce qu'on va adresser." Show you understand, not just that you read their file.
 5. Sentence 3: name the exact Factorial module or outcome that fixes that pain. "gestion RH" is forbidden — say "module Absences", "module Temps de travail", "automatiser les contrats", etc.
 6. Add a blank line between each sentence for readability.
 7. End with (use exactly): "{closing}"
