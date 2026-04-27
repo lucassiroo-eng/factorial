@@ -17,7 +17,7 @@ DEAL_PROPS = [
     DEMO_HELD_PROP,
 ]
 CONTACT_PROPS = ["firstname", "lastname", "jobtitle", "email"]
-COMPANY_PROPS = ["name", "industry", "numberofemployees"]
+COMPANY_PROPS = ["name", "industry", "numberofemployees", "country"]
 # ─────────────────────────────────────────────────────────────────────────────
 
 
