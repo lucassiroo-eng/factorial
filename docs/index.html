@@ -934,7 +934,7 @@ function startMrrPacman() {
   canvas.style.display = 'block';
   const ctx = canvas.getContext('2d');
 
-  const PAC_R = 22, BALL_R = 17, SPEED = 2.6;
+  const PAC_R = 22, HIT_R = 22, SPEED = 2.8, STEER = 0.12;
 
   const a0 = Math.random() * Math.PI * 2;
   const pac = { x: canvas.width/2, y: canvas.height/2,
@@ -943,24 +943,30 @@ function startMrrPacman() {
 
   function spawnBalls() {
     return Array.from({length: 14}, () => ({
-      x: BALL_R*2 + Math.random()*(canvas.width  - BALL_R*4),
-      y: BALL_R*2 + Math.random()*(canvas.height - BALL_R*4),
+      x: 60 + Math.random()*(canvas.width  - 120),
+      y: 60 + Math.random()*(canvas.height - 120),
       alive: true,
     }));
   }
   let balls = spawnBalls();
 
-  function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // MRR balls
+  function nearestBall() {
+    let best = null, bestD = Infinity;
     balls.forEach(b => {
       if (!b.alive) return;
-      ctx.beginPath(); ctx.arc(b.x, b.y, BALL_R, 0, Math.PI*2);
-      ctx.fillStyle = '#22c55e'; ctx.fill();
-      ctx.font = 'bold 8px Inter,sans-serif';
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#fff'; ctx.fillText('MRR', b.x, b.y);
+      const d = Math.hypot(b.x - pac.x, b.y - pac.y);
+      if (d < bestD) { bestD = d; best = b; }
     });
+    return best;
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    // MRR labels — green text only, no circle
+    ctx.font = 'bold 18px "DM Sans",sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#22c55e';
+    balls.forEach(b => { if (b.alive) ctx.fillText('MRR', b.x, b.y); });
     // Pacman
     const facing = Math.atan2(pac.vy, pac.vx);
     const m = pac.mouth * Math.PI;
@@ -970,26 +976,40 @@ function startMrrPacman() {
   }
 
   function tick() {
-    pac.x += pac.vx; pac.y += pac.vy;
-    // Bounce off edges with tiny random nudge
-    if (pac.x - PAC_R < 0)             { pac.x = PAC_R;               pac.vx =  Math.abs(pac.vx); pac.vy += (Math.random()-.5)*.8; }
-    if (pac.x + PAC_R > canvas.width)  { pac.x = canvas.width-PAC_R;  pac.vx = -Math.abs(pac.vx); pac.vy += (Math.random()-.5)*.8; }
-    if (pac.y - PAC_R < 0)             { pac.y = PAC_R;               pac.vy =  Math.abs(pac.vy); pac.vx += (Math.random()-.5)*.8; }
-    if (pac.y + PAC_R > canvas.height) { pac.y = canvas.height-PAC_R; pac.vy = -Math.abs(pac.vy); pac.vx += (Math.random()-.5)*.8; }
-    // Keep speed constant
-    const spd = Math.sqrt(pac.vx*pac.vx + pac.vy*pac.vy);
+    // Steer smoothly toward nearest MRR
+    const target = nearestBall();
+    if (target) {
+      const dx = target.x - pac.x, dy = target.y - pac.y;
+      const d  = Math.hypot(dx, dy);
+      if (d > 1) {
+        pac.vx += (dx/d * SPEED - pac.vx) * STEER;
+        pac.vy += (dy/d * SPEED - pac.vy) * STEER;
+      }
+    }
+    // Normalize speed
+    const spd = Math.hypot(pac.vx, pac.vy);
     if (spd) { pac.vx = pac.vx/spd*SPEED; pac.vy = pac.vy/spd*SPEED; }
+
+    pac.x += pac.vx; pac.y += pac.vy;
+
+    // Bounce off edges
+    if (pac.x - PAC_R < 0)             { pac.x = PAC_R;               pac.vx =  Math.abs(pac.vx); }
+    if (pac.x + PAC_R > canvas.width)  { pac.x = canvas.width-PAC_R;  pac.vx = -Math.abs(pac.vx); }
+    if (pac.y - PAC_R < 0)             { pac.y = PAC_R;               pac.vy =  Math.abs(pac.vy); }
+    if (pac.y + PAC_R > canvas.height) { pac.y = canvas.height-PAC_R; pac.vy = -Math.abs(pac.vy); }
+
     // Chomp
     pac.mouth += .045 * pac.mdir;
     if (pac.mouth >= .28) pac.mdir = -1;
     if (pac.mouth <= .02) pac.mdir =  1;
-    // Eat MRR balls
+
+    // Eat
     balls.forEach(b => {
       if (!b.alive) return;
-      const dx=pac.x-b.x, dy=pac.y-b.y;
-      if (Math.sqrt(dx*dx+dy*dy) < PAC_R+BALL_R) b.alive = false;
+      if (Math.hypot(pac.x-b.x, pac.y-b.y) < PAC_R + HIT_R) b.alive = false;
     });
     if (!balls.some(b=>b.alive)) balls = spawnBalls();
+
     draw();
     _pacRaf = requestAnimationFrame(tick);
   }
