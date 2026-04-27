@@ -5,15 +5,56 @@ from groq import Groq
 
 _GROQ_MODEL = "llama-3.3-70b-versatile"
 
+# ── Language detection — done in Python, never delegated to the model ─────────
 
-_SYSTEM = """You are a top Account Executive at Factorial (HR SaaS). You write short, casual, human pre-demo emails that sound like a real person wrote them — not a template. You follow the rules exactly, never leave placeholders, and never mix languages."""
+_COUNTRY_LANG = {
+    # Spanish
+    "spain": "Spanish", "españa": "Spanish", "es": "Spanish",
+    # French
+    "france": "French", "francia": "French", "fr": "French",
+    "belgium": "French", "bélgica": "French", "belgique": "French", "be": "French",
+    # Portuguese
+    "portugal": "Portuguese", "pt": "Portuguese",
+    # German
+    "germany": "German", "alemania": "German", "deutschland": "German", "de": "German",
+    # Italian
+    "italy": "Italian", "italia": "Italian", "it": "Italian",
+    # English fallback
+    "united kingdom": "English", "uk": "English",
+    "united states": "English", "us": "English",
+}
+
+def _detect_language(country: str) -> str:
+    return _COUNTRY_LANG.get((country or "").lower().strip(), "Spanish")
 
 
-def _call(system: str, user: str, max_tokens: int = 4000) -> str:
+def _format_meeting(ms_value, lang: str = "Spanish") -> str:
+    if not ms_value:
+        return "N/A"
+    try:
+        dt = datetime.datetime.fromtimestamp(int(ms_value) / 1000, tz=datetime.timezone.utc)
+        days = {
+            "Spanish":    ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"],
+            "French":     ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"],
+            "Portuguese": ["segunda-feira","terça-feira","quarta-feira","quinta-feira","sexta-feira","sábado","domingo"],
+            "German":     ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag","Sonntag"],
+            "Italian":    ["lunedì","martedì","mercoledì","giovedì","venerdì","sabato","domenica"],
+            "English":    ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+        }
+        day = days.get(lang, days["Spanish"])[dt.weekday()]
+        return f"{day} {dt.day:02d}/{dt.month:02d} a las {dt.hour:02d}:{dt.minute:02d}h"
+    except Exception:
+        return str(ms_value)
+
+
+# ── LLM call ──────────────────────────────────────────────────────────────────
+
+def _call(system: str, user: str) -> str:
     client = Groq(api_key=os.environ["GROQ_API_KEY"])
     chat = client.chat.completions.create(
         model=_GROQ_MODEL,
-        max_tokens=max_tokens,
+        max_tokens=2000,
+        temperature=0.3,
         messages=[
             {"role": "system", "content": system},
             {"role": "user",   "content": user},
@@ -22,137 +63,96 @@ def _call(system: str, user: str, max_tokens: int = 4000) -> str:
     return chat.choices[0].message.content.strip()
 
 
-def _format_meeting(ms_value) -> str:
-    """Convert HubSpot millisecond timestamp to readable date+time."""
-    if not ms_value:
-        return "N/A"
-    try:
-        dt = datetime.datetime.fromtimestamp(int(ms_value) / 1000, tz=datetime.timezone.utc)
-        return dt.strftime("%A %d/%m/%Y at %H:%M UTC")
-    except Exception:
-        return str(ms_value)
+# ── Prompt builders ───────────────────────────────────────────────────────────
 
+def _build_prompt(*, lang: str, contact_first: str, ae_name: str, meeting: str,
+                  company: str, employees: str, industry: str, notes: str) -> tuple[str, str]:
 
-# ── Prompt ────────────────────────────────────────────────────────────────────
+    closing = {
+        "Spanish":    "Tienes el enlace en la invitación, no hace falta que confirmes. Un saludo,",
+        "French":     "Le lien est dans l'invitation, aucune confirmation nécessaire. Cordialement,",
+        "Portuguese": "O link está no convite, não precisas de confirmar. Com os melhores cumprimentos,",
+        "German":     "Den Link findest du in der Einladung, eine Bestätigung ist nicht nötig. Mit freundlichen Grüßen,",
+        "Italian":    "Il link è nell'invito, non è necessaria alcuna conferma. Cordiali saluti,",
+        "English":    "The link is in the invite, no need to confirm. Best regards,",
+    }.get(lang, "Tienes el enlace en la invitación, no hace falta que confirmes. Un saludo,")
 
-_RULES = """## TASK
-Write a casual, human pre-demo email (3-4 sentences) + a short internal recap.
+    system = f"""You are {ae_name}, an Account Executive at Factorial (HR software).
+You are writing a pre-demo email to {contact_first}.
+LANGUAGE RULE: Write 100% in {lang}. Every single word must be in {lang}. No exceptions."""
 
-## LANGUAGE — ABSOLUTE RULE
-Detect the country and write the ENTIRE email in that language. Zero mixing.
-  Spain → Spanish | France/Belgium → French | Portugal → Portuguese | Germany → German | Italy → Italian | other → English
+    user = f"""Write a pre-demo confirmation email in {lang}.
 
-## NAME — ABSOLUTE RULE
-Use the Account Executive name given to you in sentence 1 and in the signature.
-If it is "N/A" use "tu Account Executive". NEVER leave a placeholder.
+DATA:
+- Contact first name: {contact_first}
+- Your name (AE): {ae_name}
+- Demo date/time: {meeting}
+- Company: {company} | {employees} employees | {industry}
+- Notes from sales calls:
+{notes}
 
-## DATE/TIME — ABSOLUTE RULE
-The demo datetime is given. Write the day and time naturally in the correct language.
-NEVER write [hora], [time], [heure], [day] or any bracket. Fill them in.
+EMAIL RULES:
+1. Exactly 3-4 short sentences.
+2. Every word in {lang} — absolutely no mixing.
+3. Sentence 1: greet {contact_first} by name, say you are {ae_name}, confirm the exact demo date "{meeting}".
+4. Sentence 2: mention the specific pain/need found in the notes above (name the tool, frustration, or situation — never invent).
+5. Sentence 3: say you will show specifically how Factorial solves that pain (name the module or outcome).
+6. Last sentence (use exactly): "{closing}"
+7. FORBIDDEN: "optimizar procesos", "solución completa", generic phrases, asking questions, mentioning SDR.
 
-## EMAIL STRUCTURE (3-4 sentences, casual and direct)
-
-S1 — Greet by first name, say who you are, confirm day + time.
-  Example ES: "Hola Jonathan, soy Lucas y mañana a las 10h lidero nuestra sesión."
-  Example FR: "Bonjour Sophie, c'est Lucas, je serai avec toi demain à 10h."
-
-S2 — Show you understand their main pain. Reference the specific need from the notes.
-  "Entiendo que en [Empresa] la prioridad ahora mismo es [Need], así que enfocaremos la demo en eso."
-  Do NOT pad with headcount or industry if the notes already give a clearer signal.
-
-S3 — Name the specific Factorial module or feature that solves it.
-  "Veremos el módulo de [X] para eliminar [frustración concreta]."
-  Be specific. If notes mention a tool (Sage, ADP, Excel…), name it.
-
-S4 (optional, only if needed) — Simple closing. Assumes attendance, no confirmation request.
-  "Un saludo y hasta mañana." or "À demain !"
-
-## TONE
-Casual, warm, direct. Like a smart colleague, not a sales robot.
-Short sentences. No filler words. No corporate speak.
-
-## HARD PROHIBITIONS
-- NEVER mix languages
-- NEVER leave bracket placeholders
-- NEVER mention the SDR or any handoff
-- NEVER ask for confirmation or reply
-- NEVER say: "optimizar procesos", "solución completa", "no dudes en contactar", "n'hésitez pas", "comme convenu"
-- NEVER invent facts not in the notes
-
-## SIGNAL PRIORITY (for S2/S3)
-GOLD: tool/software name, quoted frustration, hard number, named stakeholder
-SILVER: trigger event (funding, reorg, deadline), urgency signal
-BRONZE: industry context alone — only if nothing better exists
-
-## OUTPUT — copy format exactly, keep delimiters
-
-If notes AND all fields are empty → output only: NO_INFO
+OUTPUT FORMAT (keep delimiters, no extra text outside them):
 
 EMAIL_START
-Subject: [specific subject — tool name, number, or their exact pain — never generic]
+[subject line in {lang} — mention a specific tool/pain/number, never generic]
 
 [email body]
 
-[AE name]
+{ae_name}
 Account Executive — Factorial
 EMAIL_END
 
 RECAP_START
-SIGNALS: [GOLD/SILVER signals found with source quote]
-HOOK: [which signal you used and why]
-WATCH OUT: [2 deal risks]
-OPEN WITH: [2 specific demo-opening questions]
-SKIP: [what they probably don't care about]
+PAIN: [exact quote or paraphrase from notes]
+HOOK: [why this angle]
+RISKS: [2 things that could kill the deal]
+OPEN WITH: [2 demo-opening questions]
 RECAP_END"""
 
-_USER_TEMPLATE = """## DEAL DATA
-
-NOTES (main source — read carefully):
-{notes}
-
-DEAL: {deal_name} | Amount: {amount}
-DEMO: {meeting_date}
-COMPANY: {company_name} | Industry: {company_industry} | Employees: {employees} | Country: {country}
-CONTACT: {contact_name} | Title: {contact_title}
-ACCOUNT EXECUTIVE (the sender, use this name): {owner_name}
-
-Now write the email and recap."""
+    return system, user
 
 
-# ── Public functions ──────────────────────────────────────────────────────────
+# ── Public API ────────────────────────────────────────────────────────────────
 
 def analyze_and_generate(context: dict) -> tuple[str | None, str | None]:
-    """
-    Recibe el contexto completo del deal y devuelve (email, recap).
-    Retorna (None, None) si no hay suficiente información.
-    """
     deal    = context.get("deal", {})
     company = context.get("company", {})
     owner   = context.get("owner", {})
     contact = (context.get("contacts") or [{}])[0]
     notes   = context.get("notes", [])
 
-    notes_text = "\n\n---\n\n".join(_strip_html(n["body"]) for n in notes) if notes else "(sin notas)"
+    country = deal.get("country_qobra_samba") or company.get("country") or ""
+    lang    = _detect_language(country)
+    print(f"[→] Language detected: {lang} (country='{country}')")
 
-    owner_name = f"{owner.get('firstName','')} {owner.get('lastName','')}".strip() or "N/A"
-    print(f"[→] Owner resolved: '{owner_name}' (raw: {owner})")
+    owner_name    = f"{owner.get('firstName','')} {owner.get('lastName','')}".strip() or "N/A"
+    contact_name  = f"{contact.get('firstname','')} {contact.get('lastname','')}".strip() or "N/A"
+    contact_first = contact_name.split()[0] if contact_name != "N/A" else "there"
 
-    user_msg = _USER_TEMPLATE.format(
-        deal_name        = deal.get("dealname", "N/A"),
-        amount           = deal.get("amount", "N/A"),
-        meeting_date     = _format_meeting(deal.get("first_meeting_at")),
-        company_name     = company.get("name", "N/A"),
-        company_industry = company.get("industry", "N/A"),
-        employees        = company.get("numberofemployees", "N/A"),
-        country          = deal.get("country_qobra_samba", company.get("country", "N/A")),
-        contact_name     = f"{contact.get('firstname','')} {contact.get('lastname','')}".strip() or "N/A",
-        contact_title    = contact.get("jobtitle", "N/A"),
-        contact_email    = contact.get("email", "N/A"),
-        owner_name       = owner_name,
-        notes            = notes_text[:10000],
+    notes_text = "\n\n".join(_strip_html(n["body"]) for n in notes) if notes else "(no notes)"
+    print(f"[→] Owner: '{owner_name}' | Contact: '{contact_name}' | Notes: {len(notes)}")
+
+    system, user = _build_prompt(
+        lang          = lang,
+        contact_first = contact_first,
+        ae_name       = owner_name,
+        meeting       = _format_meeting(deal.get("first_meeting_at"), lang),
+        company       = company.get("name", "N/A"),
+        employees     = company.get("numberofemployees", "N/A"),
+        industry      = company.get("industry") or deal.get("industry") or "N/A",
+        notes         = notes_text[:8000],
     )
 
-    result = _call(_RULES, user_msg, max_tokens=4000)
+    result = _call(system, user)
 
     if "NO_INFO" in result:
         return None, None
