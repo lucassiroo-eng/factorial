@@ -76,41 +76,47 @@ Tag each finding:
      • Any sentence that could be copy-pasted to a different prospect unchanged
      • Any pain point or fact you invented — only use what is in the notes
 
-STEP 2 — WRITE THE EMAIL in French, signed as {owner_name}:
+STEP 2 — WRITE THE EMAIL following the mandatory guardrails below:
 
-THE GOLDEN RULE: Every sentence must be true only for THIS prospect. If you could send it to someone else without changing a word, rewrite it.
+  LANGUAGE RULE: Write in the language of the prospect's country.
+    France / Belgium → French | Spain → Spanish | Portugal → Portuguese | Germany → German | Italy → Italian | Default → French
 
-Structure (5–7 sentences total, strictly):
+  LENGTH RULE: Exactly 4 sentences. Not 3, not 5. Every word that can be cut must be cut.
 
-  LINE 1 — THE HOOK (this is everything):
-    Name the single sharpest GOLD signal immediately. No warmup, no pleasantries.
-    The prospect must read line 1 and think "they remembered."
+  MANDATORY STRUCTURE — one sentence per line, in this exact order:
 
-    ✅ GOOD: "Vous gérez 200 personnes sur 4 pays avec Nibelis et Excel — on va aller droit au but jeudi."
-    ✅ GOOD: "Vous m'avez parlé de la double-saisie entre Silae et votre ATS toutes les fins de mois — c'est exactement ce qu'on va résoudre ensemble."
-    ✅ GOOD: "180 salariés, 3 entités, et une DRH qui fait les plannings à la main — voilà ce qu'on va changer vendredi."
-    ❌ BAD: "Je reviens vers vous pour confirmer notre rendez-vous de démonstration."
-    ❌ BAD: "Ravi de vous retrouver pour vous présenter Factorial."
+    SENTENCE 1 — Logistical confirmation:
+      Greet by first name, introduce the PAE as the one leading the session, confirm day and time.
+      Template: "Hola [first name], soy [PAE name] y lideraré nuestra sesión de [day] a las [time]."
+      ✅ GOOD (FR): "Bonjour [Prénom], je suis [PAE] et j'animerai notre session de demain à [heure]."
 
-  LINES 2–4 — THE FRAME:
-    Connect their specific situation (tools, numbers, frustrations) to what they will SEE in the demo.
-    Frame it as "you'll see X applied to your exact setup" — not "Factorial can do X."
-    If you know their stack, say what replaces what. If you know their headcount, say "pour vos N personnes."
-    One sentence max on what Factorial does. The rest is about them.
+    SENTENCE 2 — Context validation (MANDATORY: employee count + industry):
+      Show you've done your homework. Use the exact headcount and industry. Be precise — "42 collaborateurs" beats "votre équipe".
+      Template: "J'ai analysé votre situation chez [Company] — [N] collaborateurs dans le secteur [Industry]."
+      ✅ GOOD: "J'ai préparé notre session en tenant compte de vos 180 collaborateurs répartis sur 3 entités dans le secteur de la construction."
+      ❌ BAD: "J'ai bien pris note de votre contexte." (too vague — use the actual numbers)
 
-    ✅ GOOD: "J'ai préparé l'environnement autour de votre configuration — paie multi-entités, gestion des absences et suivi des temps. On ne fera pas de tour de fonctionnalités : on partira de ce que vous vivez aujourd'hui."
-    ❌ BAD: "Factorial est une solution RH complète qui vous permettra de gérer l'ensemble de vos processus."
+    SENTENCE 3 — Personalised value proposition (the GOLD signal goes here):
+      State directly how Factorial will solve THEIR specific pain. Name the tool, the frustration, or the exact number.
+      Focus on outcome, not feature. Never say "Factorial est une solution complète."
+      ✅ GOOD: "J'ai configuré la session pour vous montrer concrètement comment éliminer la double-saisie entre Nibelis et votre ATS."
+      ✅ GOOD: "Nous nous concentrerons sur la suppression des exports Excel manuels qui vous coûtent plusieurs heures chaque fin de mois."
+      ❌ BAD: "Nous verrons comment Factorial peut répondre à vos besoins RH."
 
-  LINE 5 — THE CTA:
-    One sentence. Confirm the meeting. Invite them to add a topic or flag a constraint.
-    Make it feel like prep, not admin.
+    SENTENCE 4 — Low-friction close:
+      Tell them where to find the meeting link. Explicitly say no reply needed. No call to action, no questions.
+      ✅ GOOD: "Vous trouverez le lien dans l'invitation ; aucune confirmation de votre part n'est nécessaire."
+      ❌ BAD: "N'hésitez pas à me contacter si vous avez des questions."
+      ❌ BAD: "Pouvez-vous confirmer votre présence ?"
 
-    ✅ GOOD: "Si vous souhaitez qu'on commence par [their specific pain], dites-le moi — sinon à [day] à [time]."
-    ❌ BAD: "N'hésitez pas à me contacter si vous avez des questions."
+  SIGNATURE: {owner_name} / Account Executive — Factorial
+  (If a meeting link is available in the notes, include it. Otherwise omit.)
 
-  TONE: Write like a doctor who's seen this exact case before — confident, specific, zero hedging.
-  No exclamation marks. No "je reste disponible." No "cordialement" before the name.
-  Sign off: just the name, then "Account Executive — Factorial" on the next line.
+  ABSOLUTE PROHIBITIONS:
+    • Never mention the SDR, a previous call with someone else, or any internal handoff
+    • Never ask for confirmation of receipt or attendance
+    • Never exceed 4 sentences in the body
+    • Never use generic phrases: "optimiser vos processus", "solution complète", "n'hésitez pas"
 
 STEP 3 — INTERNAL RECAP in English (AE eyes only — be brutal and useful):
   - SIGNALS FOUND: list every GOLD and SILVER signal extracted, with source quote if available
