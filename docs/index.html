@@ -530,21 +530,44 @@ document.addEventListener('click', e => {
 function filterRecipient(q) {
   const box = document.getElementById('recipient-dropdown');
   if (!q.trim()) { box.classList.add('hidden'); return; }
-  if (!allOwners.length) {
-    box.innerHTML = '<p class="text-gray-400 text-sm px-3 py-2 italic">Loading…</p>';
-    box.classList.remove('hidden'); return;
-  }
-  const matches = allOwners.filter(o => o.name.toLowerCase().includes(q.toLowerCase())).slice(0, 6);
-  if (!matches.length) {
-    box.innerHTML = '<p class="text-gray-400 text-sm px-3 py-2">No results</p>';
-    box.classList.remove('hidden'); return;
-  }
-  box.innerHTML = matches.map(o => `
+
+  const ql = q.toLowerCase();
+  const matches = allOwners.filter(o =>
+    o.name.toLowerCase().includes(ql) || o.email.toLowerCase().includes(ql)
+  ).slice(0, 6);
+
+  const isEmail = q.includes('@') && q.includes('.');
+  let html = matches.map(o => `
     <div class="owner-option" onclick="selectRecipient('${o.id}')">
-      <p class="font-medium text-gray-900 text-sm">${hl(o.name, q)}</p>
-      <p class="text-gray-400 text-xs">${o.email}</p>
+      <p class="font-medium text-sm" style="color:var(--midnight);">${hl(o.name, q)}</p>
+      <p class="text-xs" style="color:var(--ink-400);">${o.email}</p>
     </div>`).join('');
+
+  if (isEmail && !matches.find(o => o.email.toLowerCase() === ql)) {
+    html += `<div class="owner-option" data-email="${escHtml(q)}" onclick="selectRecipientByEmail(this.dataset.email)"
+      style="border-top:1px solid var(--border);margin-top:4px;padding-top:10px;">
+      <p class="font-medium text-sm" style="color:var(--midnight);">Send to ${escHtml(q)}</p>
+      <p class="text-xs" style="color:var(--ink-400);">Slack lookup by email</p>
+    </div>`;
+  }
+
+  if (!html) {
+    box.innerHTML = '<p class="text-sm px-3 py-2" style="color:var(--ink-400);">No results</p>';
+  } else {
+    box.innerHTML = html;
+  }
   box.classList.remove('hidden');
+}
+
+function selectRecipientByEmail(email) {
+  recipientOwner = { id: null, name: email, email };
+  document.getElementById('recipient-dropdown').classList.add('hidden');
+  document.getElementById('recipient-search').value = '';
+  document.getElementById('recipient-avatar').textContent = '@';
+  document.getElementById('recipient-name').textContent = email;
+  document.getElementById('recipient-selected').style.display  = 'flex';
+  document.getElementById('recipient-input-wrap').style.display = 'none';
+  updateSendBar();
 }
 
 function showRecipientDropdown() {
