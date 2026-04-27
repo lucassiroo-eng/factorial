@@ -126,9 +126,16 @@ class HubSpotClient:
 
     def get_deal_owner(self, owner_id: str) -> dict:
         if not owner_id:
+            print("[!] get_deal_owner: no owner_id on deal")
             return {}
         r = self.session.get(f"{HUBSPOT_BASE}/crm/v3/owners/{owner_id}")
-        return r.json() if r.ok else {}
+        if not r.ok:
+            print(f"[!] get_deal_owner failed ({r.status_code}): {r.text[:200]}")
+            print("[!] Make sure HubSpot token has 'crm.objects.owners.read' scope.")
+            return {}
+        data = r.json()
+        print(f"[✓] Owner fetched: {data.get('firstName')} {data.get('lastName')} <{data.get('email')}>")
+        return data
 
     def find_owner_by_name(self, name: str) -> dict | None:
         """Returns the owner whose full name matches (case-insensitive, partial ok)."""

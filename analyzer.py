@@ -1,5 +1,6 @@
 import os
 import re
+import datetime
 from groq import Groq
 
 _GROQ_MODEL = "llama-3.3-70b-versatile"
@@ -15,117 +16,109 @@ def _call(prompt: str, max_tokens: int = 4000) -> str:
     return chat.choices[0].message.content.strip()
 
 
+def _format_meeting(ms_value) -> str:
+    """Convert HubSpot millisecond timestamp to readable date+time."""
+    if not ms_value:
+        return "N/A"
+    try:
+        dt = datetime.datetime.fromtimestamp(int(ms_value) / 1000, tz=datetime.timezone.utc)
+        return dt.strftime("%A %d/%m/%Y at %H:%M UTC")
+    except Exception:
+        return str(ms_value)
+
+
 # ── Master prompt ─────────────────────────────────────────────────────────────
 
-_MASTER_PROMPT = """You are the best B2B SaaS closer at Factorial — the kind of rep whose emails get forwarded internally with "regardez, ça c'est bien fait." You are writing the pre-demo confirmation email for a prospect. Your only job: make them read it and think "this person actually understood our problem."
+_MASTER_PROMPT = """You are a top-performing B2B SaaS Account Executive at Factorial (HR software). Your task: write a short pre-demo confirmation email that proves you actually understood the prospect's problem.
 
-━━━ NOTES — READ EVERY WORD ━━━
+━━━ INPUT DATA ━━━
+
+NOTES (read every word — these are your raw material):
 {notes}
 
-━━━ DEAL ━━━
-Name: {deal_name} | Amount: {amount} | Industry: {industry} | Demo: {meeting_date}
+DEAL: {deal_name} | Amount: {amount} | Demo: {meeting_date}
+COMPANY: {company_name} | Industry: {company_industry} | Employees: {employees} | Country: {country}
+CONTACT: {contact_name} | Title: {contact_title} | Email: {contact_email}
+ACCOUNT EXECUTIVE (the sender): {owner_name}
 
-━━━ COMPANY ━━━
-{company_name} · {company_industry} · {employees} employees · {country}
+━━━ INSTRUCTIONS ━━━
 
-━━━ CONTACT ━━━
-{contact_name} · {contact_title} · {contact_email}
+STEP 1 — EXTRACT SIGNALS FROM THE NOTES:
+Find the most specific, concrete detail you can use:
+  GOLD (use this): exact software/tool name (Sage, ADP, Excel, Nibelis…), a quoted frustration, a hard number (headcount, hours lost, # of manual steps), named stakeholder
+  SILVER (use if no GOLD): trigger event (funding, reorg, compliance deadline), urgency, recent change
+  BRONZE (last resort only): general industry context, company size alone
 
-━━━ ACCOUNT EXECUTIVE ━━━
-{owner_name}
+STEP 2 — WRITE THE EMAIL:
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CRITICAL LANGUAGE RULE — you MUST write the entire email in the language of the country. NO EXCEPTIONS. NO MIXING.
+  Spain → 100% Spanish
+  France / Belgium → 100% French
+  Portugal → 100% Portuguese
+  Germany → 100% German
+  Italy → 100% Italian
+  Other → English
 
-STEP 1 — EXTRACT EVERY SPECIFIC SIGNAL FROM THE NOTES:
+CRITICAL NAME RULE — the sender name is: {owner_name}
+  Use this exact name in sentence 1 and the signature. If it is "N/A", write "your Account Executive".
+  NEVER write "Votre Account Executive" or any placeholder.
 
-Tag each finding:
+CRITICAL TIME RULE — the demo datetime is: {meeting_date}
+  Extract the day name and time and write them naturally in the email language.
+  NEVER write [hora], [time], [heure] or any placeholder.
 
-  🥇 GOLD — use in email, these are your weapons:
-     • Exact tool/software names they use today (Nibelis, Sage, ADP, Lucca, Silae, Figgo, Personio, Workday, BambooHR, Eurécia, Kelio, Excel, Google Sheets…)
-     • A frustration quoted or paraphrased in their own words ("re-saisie manuelle", "pas de visibilité sur les heures projet", "export Excel tous les lundis")
-     • A hard number: headcount, sites, countries, % growth, hours/week lost, number of manual steps
-     • A named stakeholder: HR Director, DRH, CEO, COO, who will attend the demo
+EMAIL STRUCTURE — exactly 4 sentences, in this order:
 
-  🥈 SILVER — use only if no GOLD found:
-     • Their stated reason for booking (the trigger event: new funding, reorg, compliance deadline, expansion)
-     • A go-live date or urgency signal
-     • A recent change: new country, new entity, acquisition, hiring surge
+  S1 — LOGISTICS: Greet by first name only, name yourself as the AE leading the session, state the day and time.
+    Good example (Spanish): "Hola Jonathan, soy [AE name] y lideraré nuestra sesión del [day] a las [time]."
+    Good example (French): "Bonjour Sophie, je suis [AE name] et j'animerai notre session [day] à [time]."
 
-  🥉 BRONZE — absolute last resort, never lead with these:
-     • General industry context
-     • Company size or growth stage alone
+  S2 — CONTEXT VALIDATION: Show you know their situation. MUST include exact employee count + industry.
+    Good: "He preparado la sesión teniendo en cuenta vuestros 250 empleados en el sector educativo."
+    Bad: "He visto vuestro contexto." (too vague)
 
-  ⛔ KILL ON SIGHT — these phrases make the email worthless:
-     • "suite à notre échange" / "comme convenu" / "j'espère que vous allez bien"
-     • "optimiser vos processus RH" / "centraliser vos données" / "gagner en efficacité"
-     • "gérer vos équipes" / "expérience collaborateur" / "solution complète"
-     • Any sentence that could be copy-pasted to a different prospect unchanged
-     • Any pain point or fact you invented — only use what is in the notes
+  S3 — PERSONALISED VALUE: State exactly how Factorial solves THEIR specific pain using the GOLD signal.
+    Name the tool, the frustration, or the exact number. Focus on outcome, not feature.
+    Good: "Nos centraremos en eliminar la doble entrada manual entre Sage y vuestro ERP, que os cuesta horas cada cierre de mes."
+    Bad: "Veremos cómo Factorial puede optimizar vuestros procesos de RRHH." (generic — FORBIDDEN)
 
-STEP 2 — WRITE THE EMAIL following the mandatory guardrails below:
+  S4 — LOW-FRICTION CLOSE: Direct them to the meeting link. Explicitly say no reply needed.
+    Good: "Encontraréis el enlace en la invitación; no es necesario que confirmáis asistencia."
+    Bad: "No dudéis en contactarme si tenéis preguntas." (FORBIDDEN)
 
-  LANGUAGE RULE: Write in the language of the prospect's country.
-    France / Belgium → French | Spain → Spanish | Portugal → Portuguese | Germany → German | Italy → Italian | Default → French
+ABSOLUTE PROHIBITIONS:
+  • NEVER mix languages in a single email
+  • NEVER leave placeholders like [hora], [time], [AE name], [heure]
+  • NEVER mention the SDR or any internal handoff
+  • NEVER ask for confirmation or attendance
+  • NEVER exceed 4 sentences in the body
+  • NEVER use: "optimizar procesos", "solución completa", "no dudéis en contactar", "suite à notre échange", "comme convenu"
+  • NEVER invent facts not present in the notes
 
-  LENGTH RULE: Exactly 4 sentences. Not 3, not 5. Every word that can be cut must be cut.
+SIGNATURE: {owner_name} / Account Executive — Factorial
 
-  MANDATORY STRUCTURE — one sentence per line, in this exact order:
+STEP 3 — INTERNAL RECAP (English, AE eyes only):
+  SIGNALS FOUND: every GOLD/SILVER signal with source quote
+  HOOK CHOICE: which signal you used and why
+  WATCH OUT: 2 risks that could kill the deal
+  OPEN DEMO WITH: 2 specific questions to build trust immediately
+  SKIP IN DEMO: anything the notes suggest they don't care about
 
-    SENTENCE 1 — Logistical confirmation:
-      Greet by first name, introduce the PAE as the one leading the session, confirm day and time.
-      Template: "Hola [first name], soy [PAE name] y lideraré nuestra sesión de [day] a las [time]."
-      ✅ GOOD (FR): "Bonjour [Prénom], je suis [PAE] et j'animerai notre session de demain à [heure]."
+If notes AND all fields are empty/N/A → output only: NO_INFO
 
-    SENTENCE 2 — Context validation (MANDATORY: employee count + industry):
-      Show you've done your homework. Use the exact headcount and industry. Be precise — "42 collaborateurs" beats "votre équipe".
-      Template: "J'ai analysé votre situation chez [Company] — [N] collaborateurs dans le secteur [Industry]."
-      ✅ GOOD: "J'ai préparé notre session en tenant compte de vos 180 collaborateurs répartis sur 3 entités dans le secteur de la construction."
-      ❌ BAD: "J'ai bien pris note de votre contexte." (too vague — use the actual numbers)
-
-    SENTENCE 3 — Personalised value proposition (the GOLD signal goes here):
-      State directly how Factorial will solve THEIR specific pain. Name the tool, the frustration, or the exact number.
-      Focus on outcome, not feature. Never say "Factorial est une solution complète."
-      ✅ GOOD: "J'ai configuré la session pour vous montrer concrètement comment éliminer la double-saisie entre Nibelis et votre ATS."
-      ✅ GOOD: "Nous nous concentrerons sur la suppression des exports Excel manuels qui vous coûtent plusieurs heures chaque fin de mois."
-      ❌ BAD: "Nous verrons comment Factorial peut répondre à vos besoins RH."
-
-    SENTENCE 4 — Low-friction close:
-      Tell them where to find the meeting link. Explicitly say no reply needed. No call to action, no questions.
-      ✅ GOOD: "Vous trouverez le lien dans l'invitation ; aucune confirmation de votre part n'est nécessaire."
-      ❌ BAD: "N'hésitez pas à me contacter si vous avez des questions."
-      ❌ BAD: "Pouvez-vous confirmer votre présence ?"
-
-  SIGNATURE: {owner_name} / Account Executive — Factorial
-  (If a meeting link is available in the notes, include it. Otherwise omit.)
-
-  ABSOLUTE PROHIBITIONS:
-    • Never mention the SDR, a previous call with someone else, or any internal handoff
-    • Never ask for confirmation of receipt or attendance
-    • Never exceed 4 sentences in the body
-    • Never use generic phrases: "optimiser vos processus", "solution complète", "n'hésitez pas"
-
-STEP 3 — INTERNAL RECAP in English (AE eyes only — be brutal and useful):
-  - SIGNALS FOUND: list every GOLD and SILVER signal extracted, with source quote if available
-  - HOOK CHOICE: which signal you led with and why it's the sharpest angle
-  - WATCH OUT: 2 risk factors or unknowns that could kill the deal (budget not confirmed, multiple decision-makers, incumbent vendor loyalty, etc.)
-  - OPEN THE DEMO WITH: 2 specific questions that will immediately build trust and uncover depth
-  - SKIP IN DEMO: anything in their notes that suggests they don't care about (saves time)
-
-If the notes AND all deal fields are completely empty / N/A, output only: NO_INFO
-
-Otherwise output EXACTLY this format (keep the delimiters):
+Otherwise output EXACTLY (keep the delimiters):
 
 EMAIL_START
-Objet : [subject line — must contain either a tool name, a number, or their exact stated goal. Never generic.]
+Subject: [subject line — must contain a tool name, a number, or their exact stated goal — NEVER generic]
 
-[email body — no blank lines between paragraphs, just line breaks]
+[4-sentence email body]
 
 {owner_name}
 Account Executive — Factorial
 EMAIL_END
 
 RECAP_START
-[internal recap in English]
+[internal recap]
 RECAP_END"""
 
 
@@ -144,20 +137,22 @@ def analyze_and_generate(context: dict) -> tuple[str | None, str | None]:
 
     notes_text = "\n\n---\n\n".join(_strip_html(n["body"]) for n in notes) if notes else "(sin notas)"
 
+    owner_name = f"{owner.get('firstName','')} {owner.get('lastName','')}".strip() or "N/A"
+    print(f"[→] Owner resolved: '{owner_name}' (raw: {owner})")
+
     prompt = _MASTER_PROMPT.format(
-        deal_name      = deal.get("dealname", "N/A"),
-        amount         = deal.get("amount", "N/A"),
-        industry       = deal.get("industry", "N/A"),
-        meeting_date   = deal.get("first_meeting_at", "N/A"),
-        company_name   = company.get("name", "N/A"),
+        deal_name        = deal.get("dealname", "N/A"),
+        amount           = deal.get("amount", "N/A"),
+        meeting_date     = _format_meeting(deal.get("first_meeting_at")),
+        company_name     = company.get("name", "N/A"),
         company_industry = company.get("industry", "N/A"),
-        employees      = company.get("numberofemployees", "N/A"),
-        country        = deal.get("country_qobra_samba", company.get("country", "N/A")),
-        contact_name   = f"{contact.get('firstname','')} {contact.get('lastname','')}".strip() or "N/A",
-        contact_title  = contact.get("jobtitle", "N/A"),
-        contact_email  = contact.get("email", "N/A"),
-        owner_name     = f"{owner.get('firstName','')} {owner.get('lastName','')}".strip() or "Votre Account Executive",
-        notes          = notes_text[:10000],
+        employees        = company.get("numberofemployees", "N/A"),
+        country          = deal.get("country_qobra_samba", company.get("country", "N/A")),
+        contact_name     = f"{contact.get('firstname','')} {contact.get('lastname','')}".strip() or "N/A",
+        contact_title    = contact.get("jobtitle", "N/A"),
+        contact_email    = contact.get("email", "N/A"),
+        owner_name       = owner_name,
+        notes            = notes_text[:10000],
     )
 
     result = _call(prompt, max_tokens=4000)
