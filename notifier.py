@@ -20,18 +20,22 @@ def _resolve_user_id(client: WebClient, owner_email: str | None) -> str:
         except SlackApiError as e:
             print(f"[!] Could not resolve Slack user for {owner_email}: {e.response['error']}")
     if FALLBACK_SLACK_USER:
+        print(f"[→] Using fallback SLACK_USER_ID: {FALLBACK_SLACK_USER}")
         return FALLBACK_SLACK_USER
     raise RuntimeError("No Slack recipient: owner email lookup failed and SLACK_USER_ID is not set.")
 
 
 def _slack(client: WebClient, user_id: str, text: str):
     try:
-        # Open (or reuse) the DM channel — required for bot tokens
+        print(f"[→] Opening DM channel for user {user_id}...")
         dm = client.conversations_open(users=user_id)
         channel = dm["channel"]["id"]
+        print(f"[✓] DM channel: {channel}")
+        print(f"[→] Posting message ({len(text)} chars)...")
         client.chat_postMessage(channel=channel, text=text, mrkdwn=True)
+        print(f"[✓] Message delivered to {user_id} via {channel}")
     except SlackApiError as e:
-        print(f"[Slack error] {e.response['error']}")
+        print(f"[Slack error] {e.response['error']} — full response: {e.response}")
 
 
 def send_no_bant(deal: dict, context: dict):
