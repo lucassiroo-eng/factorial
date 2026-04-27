@@ -829,7 +829,7 @@ async function startSending() {
       setItem(deal.id, 'error', `Failed: ${e.message}`);
       done++;
     }
-    await sleep(600);
+    await sleep(60000); // 1 per minute
   }
 
   let attempts = 0;
