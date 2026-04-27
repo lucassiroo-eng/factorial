@@ -3,7 +3,7 @@ import re
 import datetime
 from groq import Groq
 
-_GROQ_MODEL = "meta-llama/llama-4-maverick-17b-128e-instruct"
+_GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
 _SYSTEM = """You are a top Account Executive at Factorial (HR SaaS). You write short, casual, human pre-demo emails that sound like a real person wrote them — not a template. You follow the rules exactly, never leave placeholders, and never mix languages."""
