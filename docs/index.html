@@ -144,10 +144,7 @@
         <span style="color:var(--ink-200);">·</span>
         <span class="text-xs" style="color:var(--ink-400);">Partners Distribution</span>
       </div>
-      <button onclick="openSettings()" class="btn-ghost px-3 py-1.5 flex items-center gap-1.5 text-sm">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-        Settings
-      </button>
+      <!-- Settings hidden — open via openSettings() in console if needed -->
     </div>
   </div>
 
@@ -701,7 +698,7 @@ function renderDeals(filterLabel) {
   document.getElementById('deals-title').textContent = deals.length
     ? `${deals.length} upcoming demo${deals.length > 1 ? 's' : ''}`
     : 'No demos found';
-  document.getElementById('deals-subtitle').textContent = filterLabel + ' · sorted by date';
+  document.getElementById('deals-subtitle').textContent = filterLabel;
 
   if (!deals.length) {
     document.getElementById('no-deals').classList.remove('hidden');
@@ -713,27 +710,41 @@ function renderDeals(filterLabel) {
   document.getElementById('no-deals').classList.add('hidden');
   document.getElementById('select-all-btn').classList.remove('hidden');
 
-  document.getElementById('deals-list').innerHTML = deals.map(d => `
-    <div class="deal-card p-4 flex items-start gap-4" id="deal-${d.id}" onclick="toggleDeal('${d.id}')">
-      <div class="deal-checkbox mt-0.5">
-        <svg class="w-3.5 h-3.5 text-white hidden check-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
-        </svg>
-      </div>
-      <div class="flex-1 min-w-0">
-        <div class="flex items-start justify-between gap-3">
-          <p class="font-semibold text-gray-900 text-sm leading-tight">${escHtml(d.name)}</p>
-          <span class="date-badge text-xs font-semibold px-2.5 py-1 rounded-lg whitespace-nowrap flex-shrink-0">${formatDate(d.date)}</span>
+  // Group by date
+  let html = '', lastDate = null;
+  deals.forEach(d => {
+    const dateLabel = formatDate(d.date);
+    if (dateLabel !== lastDate) {
+      if (lastDate !== null) html += '</div>';
+      html += `
+        <div class="mb-1 mt-5 first:mt-0 flex items-center gap-3">
+          <span class="text-xs font-semibold" style="color:var(--ink-400);letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap;">${dateLabel}</span>
+          <div style="flex:1;height:1px;background:var(--border);"></div>
         </div>
-        <div class="flex flex-wrap gap-2 mt-2">
-          ${d.owner    ? `<span style="${ownerColor(d.owner)};font-size:11px;font-weight:500;padding:3px 10px;border-radius:12px;">${escHtml(d.owner)}</span>` : ''}
-          ${d.market   ? `<span style="background:var(--ink-50);color:var(--ink-500);font-size:11px;font-weight:500;padding:3px 10px;border-radius:12px;">${escHtml(d.market)}</span>` : ''}
-          ${d.industry ? `<span style="background:#EEF3FF;color:#3B5BDB;font-size:11px;font-weight:500;padding:3px 10px;border-radius:12px;">${escHtml(d.industry)}</span>` : ''}
-          ${d.amount   ? `<span style="background:#E4F5F1;color:#206B5F;font-size:11px;font-weight:500;padding:3px 10px;border-radius:12px;">${formatAmount(d.amount)}</span>` : ''}
+        <div class="space-y-2">`;
+      lastDate = dateLabel;
+    }
+    html += `
+      <div class="deal-card p-4 flex items-start gap-4" id="deal-${d.id}" onclick="toggleDeal('${d.id}')">
+        <div class="deal-checkbox mt-0.5">
+          <svg class="w-3.5 h-3.5 text-white hidden check-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
         </div>
-      </div>
-    </div>`).join('');
+        <div class="flex-1 min-w-0">
+          <p class="font-semibold text-sm leading-tight" style="color:var(--midnight);">${escHtml(d.name)}</p>
+          <div class="flex flex-wrap gap-2 mt-2">
+            ${d.owner    ? `<span style="${ownerColor(d.owner)};font-size:11px;font-weight:500;padding:3px 10px;border-radius:12px;">${escHtml(d.owner)}</span>` : ''}
+            ${d.market   ? `<span style="background:var(--ink-50);color:var(--ink-500);font-size:11px;font-weight:500;padding:3px 10px;border-radius:12px;">${escHtml(d.market)}</span>` : ''}
+            ${d.industry ? `<span style="background:#EEF3FF;color:#3B5BDB;font-size:11px;font-weight:500;padding:3px 10px;border-radius:12px;">${escHtml(d.industry)}</span>` : ''}
+            ${d.amount   ? `<span style="background:#E4F5F1;color:#206B5F;font-size:11px;font-weight:500;padding:3px 10px;border-radius:12px;">${formatAmount(d.amount)}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+  });
+  if (lastDate !== null) html += '</div>';
 
+  document.getElementById('deals-list').innerHTML = html;
   updateSendBar();
 }
 
@@ -940,7 +951,7 @@ function formatDate(val) {
 
 function formatAmount(v) {
   const n = parseFloat(v); if (isNaN(n)) return v;
-  return n >= 1000 ? `€${(n/1000).toFixed(0)}k` : `€${n}`;
+  return n >= 1000 ? `€${(n/1000).toFixed(0)}k` : `€${Math.round(n)}`;
 }
 
 function escHtml(s) {
