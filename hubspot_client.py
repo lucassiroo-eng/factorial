@@ -24,6 +24,17 @@ COMPANY_PROPS = ["name", "industry", "numberofemployees", "country"]
 _DAILY_CALL_LIMIT = 50_000
 
 
+def _fallback_owner() -> dict:
+    """Returns owner dict from AE_NAME / AE_EMAIL env vars when HubSpot scope is missing."""
+    name  = os.environ.get("AE_NAME", "").strip()
+    email = os.environ.get("AE_EMAIL", "").strip()
+    first, *rest = name.split(" ", 1) if name else ("", [])
+    last = rest[0] if rest else ""
+    if name:
+        print(f"[→] Owner fallback: {name} <{email}>")
+    return {"firstName": first, "lastName": last, "email": email}
+
+
 class HubSpotClient:
     def __init__(self):
         self.token = os.environ["HUBSPOT_API_KEY"]
@@ -147,15 +158,13 @@ class HubSpotClient:
 
     def get_deal_owner(self, owner_id: str) -> dict:
         if not owner_id:
-            print("[!] get_deal_owner: no owner_id on deal")
-            return {}
+            return _fallback_owner()
         r = self._get(f"{HUBSPOT_BASE}/crm/v3/owners/{owner_id}")
         if not r.ok:
-            print(f"[!] get_deal_owner failed ({r.status_code}): {r.text[:200]}")
-            print("[!] Make sure HubSpot token has 'crm.objects.owners.read' scope.")
-            return {}
+            print(f"[!] get_deal_owner failed ({r.status_code}) — using AE_NAME/AE_EMAIL fallback.")
+            return _fallback_owner()
         data = r.json()
-        print(f"[✓] Owner fetched: {data.get('firstName')} {data.get('lastName')} <{data.get('email')}>")
+        print(f"[✓] Owner: {data.get('firstName')} {data.get('lastName')} <{data.get('email')}>")
         return data
 
     def find_owner_by_name(self, name: str) -> dict | None:

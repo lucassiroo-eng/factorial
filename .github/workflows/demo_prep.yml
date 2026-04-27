@@ -75,6 +75,8 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           SLACK_TOKEN:     ${{ secrets.SLACK_TOKEN }}
           SLACK_USER_ID:   ${{ secrets.SLACK_USER_ID }}
+          AE_NAME:         ${{ secrets.AE_NAME }}
+          AE_EMAIL:        ${{ secrets.AE_EMAIL }}
         run: |
           DEAL_ID="${{ github.event.inputs.deal_id }}"
           TYPE="${{ github.event.inputs.filter_type }}"
