@@ -12,7 +12,7 @@ def _call(prompt: str, max_tokens: int = 4000) -> str:
     resp = requests.post(
         f"{_AZURE_ENDPOINT}/anthropic/v1/messages?api-version={_AZURE_API_VER}",
         headers={
-            "api-key":           os.environ["AZURE_API_KEY"],
+            "api-key":           os.environ["AZURE_ANTHROPIC_API_KEY"],
             "Content-Type":      "application/json",
             "anthropic-version": "2023-06-01",
         },
