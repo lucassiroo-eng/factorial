@@ -7,12 +7,15 @@ _AZURE_API_VER = "2025-01-01-preview"
 
 
 def _call(prompt: str, max_tokens: int = 4000) -> str:
-    endpoint = os.environ["AZURE_ANTHROPIC_ENDPOINT"].rstrip("/")
-    model    = os.environ["AZURE_ANTHROPIC_MODEL"]
-    api_key  = os.environ["AZURE_ANTHROPIC_API_KEY"]
+    raw_endpoint = os.environ["AZURE_ANTHROPIC_ENDPOINT"].rstrip("/")
+    model        = os.environ["AZURE_ANTHROPIC_MODEL"]
+    api_key      = os.environ["AZURE_ANTHROPIC_API_KEY"]
+
+    # Strip /anthropic suffix if already in endpoint to avoid duplication
+    base = raw_endpoint[:-len("/anthropic")] if raw_endpoint.endswith("/anthropic") else raw_endpoint
 
     resp = requests.post(
-        f"{endpoint}/anthropic/v1/messages?api-version={_AZURE_API_VER}",
+        f"{base}/anthropic/v1/messages?api-version={_AZURE_API_VER}",
         headers={
             "api-key":           api_key,
             "Content-Type":      "application/json",
