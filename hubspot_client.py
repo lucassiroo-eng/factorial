@@ -21,14 +21,35 @@ COMPANY_PROPS = ["name", "industry", "numberofemployees", "country"]
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+_DAILY_CALL_LIMIT = 50_000
+
+
 class HubSpotClient:
     def __init__(self):
         self.token = os.environ["HUBSPOT_API_KEY"]
+        self._call_count = 0
         self.session = requests.Session()
         self.session.headers.update({
             "Authorization": f"Bearer {self.token}",
             "Content-Type": "application/json",
         })
+
+    def _get(self, *args, **kwargs):
+        return self._request("GET", *args, **kwargs)
+
+    def _post(self, *args, **kwargs):
+        return self._request("POST", *args, **kwargs)
+
+    def _request(self, method: str, url: str, **kwargs):
+        self._call_count += 1
+        if self._call_count > _DAILY_CALL_LIMIT:
+            raise RuntimeError(
+                f"[HARD STOP] HubSpot daily call limit reached ({_DAILY_CALL_LIMIT}). "
+                "Aborting to protect API quota."
+            )
+        if self._call_count % 1000 == 0:
+            print(f"[!] HubSpot API calls so far this run: {self._call_count}/{_DAILY_CALL_LIMIT}")
+        return self.session.request(method, url, **kwargs)
 
     # ── Deal search ───────────────────────────────────────────────────────────
 
@@ -52,7 +73,7 @@ class HubSpotClient:
             "sorts": [{"propertyName": "first_meeting_at", "direction": "ASCENDING"}],
             "limit": 1,
         }
-        resp = self.session.post(f"{HUBSPOT_BASE}/crm/v3/objects/deals/search", json=payload)
+        resp = self._post(f"{HUBSPOT_BASE}/crm/v3/objects/deals/search", json=payload)
         resp.raise_for_status()
         results = resp.json().get("results", [])
         return results[0] if results else None
@@ -88,7 +109,7 @@ class HubSpotClient:
             }
             if after:
                 payload["after"] = after
-            resp = self.session.post(f"{HUBSPOT_BASE}/crm/v3/objects/deals/search", json=payload)
+            resp = self._post(f"{HUBSPOT_BASE}/crm/v3/objects/deals/search", json=payload)
             resp.raise_for_status()
             data = resp.json()
             all_deals.extend(data.get("results", []))
@@ -100,11 +121,11 @@ class HubSpotClient:
     # ── Associations ──────────────────────────────────────────────────────────
 
     def get_deal_contacts(self, deal_id: str) -> list:
-        resp = self.session.get(f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/contacts")
+        resp = self._get(f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/contacts")
         resp.raise_for_status()
         contacts = []
         for r in resp.json().get("results", []):
-            c = self.session.get(
+            c = self._get(
                 f"{HUBSPOT_BASE}/crm/v3/objects/contacts/{r['toObjectId']}",
                 params={"properties": ",".join(CONTACT_PROPS)},
             )
@@ -113,12 +134,12 @@ class HubSpotClient:
         return contacts
 
     def get_deal_company(self, deal_id: str) -> dict:
-        resp = self.session.get(f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/companies")
+        resp = self._get(f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/companies")
         resp.raise_for_status()
         results = resp.json().get("results", [])
         if not results:
             return {}
-        r = self.session.get(
+        r = self._get(
             f"{HUBSPOT_BASE}/crm/v3/objects/companies/{results[0]['toObjectId']}",
             params={"properties": ",".join(COMPANY_PROPS)},
         )
@@ -128,7 +149,7 @@ class HubSpotClient:
         if not owner_id:
             print("[!] get_deal_owner: no owner_id on deal")
             return {}
-        r = self.session.get(f"{HUBSPOT_BASE}/crm/v3/owners/{owner_id}")
+        r = self._get(f"{HUBSPOT_BASE}/crm/v3/owners/{owner_id}")
         if not r.ok:
             print(f"[!] get_deal_owner failed ({r.status_code}): {r.text[:200]}")
             print("[!] Make sure HubSpot token has 'crm.objects.owners.read' scope.")
@@ -139,7 +160,7 @@ class HubSpotClient:
 
     def find_owner_by_name(self, name: str) -> dict | None:
         """Returns the owner whose full name matches (case-insensitive, partial ok)."""
-        r = self.session.get(f"{HUBSPOT_BASE}/crm/v3/owners", params={"limit": 100})
+        r = self._get(f"{HUBSPOT_BASE}/crm/v3/owners", params={"limit": 100})
         if not r.ok:
             return None
         name_lower = name.lower()
@@ -150,7 +171,7 @@ class HubSpotClient:
         return None
 
     def get_deal_by_id(self, deal_id: str) -> dict | None:
-        r = self.session.get(
+        r = self._get(
             f"{HUBSPOT_BASE}/crm/v3/objects/deals/{deal_id}",
             params={"properties": ",".join(DEAL_PROPS)},
         )
@@ -158,7 +179,7 @@ class HubSpotClient:
 
     def get_all_owners(self) -> dict:
         """Returns {owner_id: full_name} for all HubSpot owners in one API call."""
-        r = self.session.get(f"{HUBSPOT_BASE}/crm/v3/owners", params={"limit": 100})
+        r = self._get(f"{HUBSPOT_BASE}/crm/v3/owners", params={"limit": 100})
         if not r.ok:
             print(f"[!] get_all_owners failed: {r.status_code} {r.text[:200]}")
             print("[!] Make sure the HubSpot token has 'crm.objects.owners.read' scope.")
@@ -171,14 +192,14 @@ class HubSpotClient:
         return result
 
     def get_deal_notes(self, deal_id: str) -> list:
-        resp = self.session.get(f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/notes")
+        resp = self._get(f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/notes")
         resp.raise_for_status()
         note_ids = [r["toObjectId"] for r in resp.json().get("results", [])]
         if not note_ids:
             return []
 
         # Batch read all notes in a single API call instead of N sequential calls
-        batch = self.session.post(
+        batch = self._post(
             f"{HUBSPOT_BASE}/crm/v3/objects/notes/batch/read",
             json={
                 "properties": ["hs_note_body", "hs_timestamp"],
@@ -191,7 +212,7 @@ class HubSpotClient:
             print(f"[!] Batch notes failed ({batch.status_code}), falling back to sequential reads.")
             notes = []
             for nid in note_ids:
-                n = self.session.get(
+                n = self._get(
                     f"{HUBSPOT_BASE}/crm/v3/objects/notes/{nid}",
                     params={"properties": "hs_note_body,hs_timestamp"},
                 )

@@ -72,6 +72,11 @@ def run_by_id(deal_id: str, send_to_me: bool = False, recipient_email: str | Non
     _process_deal(hs, deal, send_to_me=send_to_me, recipient_email=recipient_email)
 
 
+def _log_api_usage(hs: HubSpotClient):
+    from hubspot_client import _DAILY_CALL_LIMIT
+    print(f"[→] HubSpot API calls this run: {hs._call_count}/{_DAILY_CALL_LIMIT}")
+
+
 def _process_deal(hs: HubSpotClient, deal: dict, send_to_me: bool = False, recipient_email: str | None = None):
     props   = deal.get("properties", {})
     name    = props.get("dealname", deal["id"])
@@ -99,6 +104,7 @@ def _process_deal(hs: HubSpotClient, deal: dict, send_to_me: bool = False, recip
         effective_email = context.get("owner", {}).get("email")
     notifier.send_email_and_recap(deal, email, recap, owner_email=effective_email)
     print("[✓] Done.")
+    _log_api_usage(hs)
 
 
 if __name__ == "__main__":
