@@ -3,11 +3,10 @@ import re
 import datetime
 from groq import Groq
 
-_GROQ_MODEL = "llama-3.3-70b-versatile"
+_GROQ_MODEL = "meta-llama/llama-4-maverick-17b-128e-instruct"
 
 
-_SYSTEM = """You are a top-performing B2B SaaS Account Executive at Factorial (HR software).
-You write pre-demo confirmation emails. You follow every rule exactly. You never leave placeholders unfilled. You never mix languages."""
+_SYSTEM = """You are a top Account Executive at Factorial (HR SaaS). You write short, casual, human pre-demo emails that sound like a real person wrote them — not a template. You follow the rules exactly, never leave placeholders, and never mix languages."""
 
 
 def _call(system: str, user: str, max_tokens: int = 4000) -> str:
@@ -36,74 +35,88 @@ def _format_meeting(ms_value) -> str:
 
 # ── Prompt ────────────────────────────────────────────────────────────────────
 
-_RULES = """## YOUR TASK
-Write a 4-sentence pre-demo confirmation email + an internal recap.
+_RULES = """## TASK
+Write a casual, human pre-demo email (3-4 sentences) + a short internal recap.
 
-## LANGUAGE — NON-NEGOTIABLE
-Write the ENTIRE email in ONE language based on the country:
+## LANGUAGE — ABSOLUTE RULE
+Detect the country and write the ENTIRE email in that language. Zero mixing.
   Spain → Spanish | France/Belgium → French | Portugal → Portuguese | Germany → German | Italy → Italian | other → English
-DO NOT mix languages. A Spanish email must be 100% Spanish — no French words, no English words.
 
-## SENDER NAME — NON-NEGOTIABLE
-The Account Executive name is given to you. Use it exactly in sentence 1 and in the signature.
-NEVER write "Votre Account Executive", "your AE", or any placeholder. If name is N/A, write "your Account Executive".
+## NAME — ABSOLUTE RULE
+Use the Account Executive name given to you in sentence 1 and in the signature.
+If it is "N/A" use "tu Account Executive". NEVER leave a placeholder.
 
-## DEMO DATE/TIME — NON-NEGOTIABLE
-The demo datetime is given to you. Extract day + time and write them naturally in the email language.
-NEVER leave [hora], [time], [heure], [day] or any bracket placeholder in the output.
+## DATE/TIME — ABSOLUTE RULE
+The demo datetime is given. Write the day and time naturally in the correct language.
+NEVER write [hora], [time], [heure], [day] or any bracket. Fill them in.
 
-## EMAIL STRUCTURE — exactly 4 sentences
-S1 LOGISTICS — greet by first name, introduce yourself as the AE leading the session, state day and time.
-S2 CONTEXT — prove you know their situation: MUST include exact headcount + industry sector.
-S3 VALUE — one specific outcome Factorial will deliver for THEIR exact pain (tool name / frustration / hard number from notes). No generic claims.
-S4 CLOSE — tell them where the link is; say no reply needed. No questions, no "feel free to contact".
+## EMAIL STRUCTURE (3-4 sentences, casual and direct)
 
-## FORBIDDEN PHRASES (any language)
-"optimize your processes", "complete solution", "don't hesitate", "suite à notre échange", "comme convenu",
-"n'hésitez pas", "no dudéis", "solución completa", "optimizar procesos", any phrase that could paste to any prospect.
+S1 — Greet by first name, say who you are, confirm day + time.
+  Example ES: "Hola Jonathan, soy Lucas y mañana a las 10h lidero nuestra sesión."
+  Example FR: "Bonjour Sophie, c'est Lucas, je serai avec toi demain à 10h."
 
-## SIGNAL PRIORITY
-Use notes to find: GOLD = software name, quoted frustration, hard number, named stakeholder.
-SILVER = trigger event, urgency, recent change. BRONZE = industry context alone (last resort).
-NEVER invent a fact not in the notes.
+S2 — Show you understand their main pain. Reference the specific need from the notes.
+  "Entiendo que en [Empresa] la prioridad ahora mismo es [Need], así que enfocaremos la demo en eso."
+  Do NOT pad with headcount or industry if the notes already give a clearer signal.
 
-## OUTPUT FORMAT — copy exactly, keep delimiters
+S3 — Name the specific Factorial module or feature that solves it.
+  "Veremos el módulo de [X] para eliminar [frustración concreta]."
+  Be specific. If notes mention a tool (Sage, ADP, Excel…), name it.
+
+S4 (optional, only if needed) — Simple closing. Assumes attendance, no confirmation request.
+  "Un saludo y hasta mañana." or "À demain !"
+
+## TONE
+Casual, warm, direct. Like a smart colleague, not a sales robot.
+Short sentences. No filler words. No corporate speak.
+
+## HARD PROHIBITIONS
+- NEVER mix languages
+- NEVER leave bracket placeholders
+- NEVER mention the SDR or any handoff
+- NEVER ask for confirmation or reply
+- NEVER say: "optimizar procesos", "solución completa", "no dudes en contactar", "n'hésitez pas", "comme convenu"
+- NEVER invent facts not in the notes
+
+## SIGNAL PRIORITY (for S2/S3)
+GOLD: tool/software name, quoted frustration, hard number, named stakeholder
+SILVER: trigger event (funding, reorg, deadline), urgency signal
+BRONZE: industry context alone — only if nothing better exists
+
+## OUTPUT — copy format exactly, keep delimiters
+
 If notes AND all fields are empty → output only: NO_INFO
 
-Otherwise:
-
 EMAIL_START
-Subject: [must contain a tool name OR a number OR their exact stated goal — never generic]
+Subject: [specific subject — tool name, number, or their exact pain — never generic]
 
-[S1]
-[S2]
-[S3]
-[S4]
+[email body]
 
-[AE full name]
+[AE name]
 Account Executive — Factorial
 EMAIL_END
 
 RECAP_START
-SIGNALS FOUND: [list every GOLD/SILVER signal with quote]
-HOOK CHOICE: [which signal and why]
+SIGNALS: [GOLD/SILVER signals found with source quote]
+HOOK: [which signal you used and why]
 WATCH OUT: [2 deal risks]
-OPEN DEMO WITH: [2 specific questions]
-SKIP IN DEMO: [what they don't care about]
+OPEN WITH: [2 specific demo-opening questions]
+SKIP: [what they probably don't care about]
 RECAP_END"""
 
 _USER_TEMPLATE = """## DEAL DATA
 
-NOTES:
+NOTES (main source — read carefully):
 {notes}
 
 DEAL: {deal_name} | Amount: {amount}
-DEMO DATE/TIME: {meeting_date}
+DEMO: {meeting_date}
 COMPANY: {company_name} | Industry: {company_industry} | Employees: {employees} | Country: {country}
 CONTACT: {contact_name} | Title: {contact_title}
-ACCOUNT EXECUTIVE (sender): {owner_name}
+ACCOUNT EXECUTIVE (the sender, use this name): {owner_name}
 
-Write the email and recap now."""
+Now write the email and recap."""
 
 
 # ── Public functions ──────────────────────────────────────────────────────────
