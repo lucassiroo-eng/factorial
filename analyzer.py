@@ -28,23 +28,30 @@ def _detect_language(country: str) -> str:
     return _COUNTRY_LANG.get((country or "").lower().strip(), "Spanish")
 
 
-def _format_meeting(ms_value, lang: str = "Spanish") -> str:
-    if not ms_value:
+def _format_meeting(raw, lang: str = "Spanish") -> str:
+    if not raw:
         return "N/A"
+    days = {
+        "Spanish":    ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"],
+        "French":     ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"],
+        "Portuguese": ["segunda-feira","terça-feira","quarta-feira","quinta-feira","sexta-feira","sábado","domingo"],
+        "German":     ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag","Sonntag"],
+        "Italian":    ["lunedì","martedì","mercoledì","giovedì","venerdì","sabato","domenica"],
+        "English":    ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
+    }
     try:
-        dt = datetime.datetime.fromtimestamp(int(ms_value) / 1000, tz=datetime.timezone.utc)
-        days = {
-            "Spanish":    ["lunes","martes","miércoles","jueves","viernes","sábado","domingo"],
-            "French":     ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"],
-            "Portuguese": ["segunda-feira","terça-feira","quarta-feira","quinta-feira","sexta-feira","sábado","domingo"],
-            "German":     ["Montag","Dienstag","Mittwoch","Donnerstag","Freitag","Samstag","Sonntag"],
-            "Italian":    ["lunedì","martedì","mercoledì","giovedì","venerdì","sabato","domenica"],
-            "English":    ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"],
-        }
+        v = str(raw).strip()
+        # Millisecond timestamp (13 digits)
+        if v.isdigit() and len(v) >= 12:
+            dt = datetime.datetime.fromtimestamp(int(v) / 1000, tz=datetime.timezone.utc)
+        # ISO date "2026-04-28" or datetime "2026-04-28T10:00:00Z"
+        else:
+            dt = datetime.datetime.fromisoformat(v.replace("Z", "+00:00").split("T")[0])
         day = days.get(lang, days["Spanish"])[dt.weekday()]
-        return f"{day} {dt.day:02d}/{dt.month:02d} a las {dt.hour:02d}:{dt.minute:02d}h"
+        time_str = f" à {dt.hour:02d}h{dt.minute:02d}" if dt.hour else ""
+        return f"{day} {dt.day:02d}/{dt.month:02d}{time_str}"
     except Exception:
-        return str(ms_value)
+        return str(raw)
 
 
 # ── LLM call ──────────────────────────────────────────────────────────────────
@@ -69,13 +76,13 @@ def _build_prompt(*, lang: str, contact_first: str, ae_name: str, meeting: str,
                   company: str, employees: str, industry: str, notes: str) -> tuple[str, str]:
 
     closing = {
-        "Spanish":    "Tienes el enlace en la invitación. Un saludo,",
-        "French":     "Le lien est dans l'invitation. À demain,",
-        "Portuguese": "O link está no convite. Até amanhã,",
-        "German":     "Den Link findest du in der Einladung. Bis morgen,",
-        "Italian":    "Il link è nell'invito. A domani,",
-        "English":    "The link is in the invite. See you then,",
-    }.get(lang, "Tienes el enlace en la invitación. Un saludo,")
+        "Spanish":    "¡Hasta mañana!",
+        "French":     "À demain !",
+        "Portuguese": "Até amanhã!",
+        "German":     "Bis morgen!",
+        "Italian":    "A domani!",
+        "English":    "See you then!",
+    }.get(lang, "¡Hasta mañana!")
 
     system = f"""You are {ae_name}, an Account Executive at Factorial (HR software).
 You are writing a pre-demo email to {contact_first}.
@@ -95,9 +102,11 @@ EMAIL RULES:
 1. Exactly 3-4 short sentences.
 2. Every word in {lang} — absolutely no mixing.
 3. Sentence 1: greet {contact_first} by name, say you are {ae_name}, confirm the exact demo date "{meeting}".
-4. Sentence 2: mention the specific pain/need found in the notes above (name the tool, frustration, or situation — never invent).
-5. Sentence 3: say you will show specifically how Factorial solves that pain (name the module or outcome).
-6. Last sentence (use exactly): "{closing}"
+4. Sentence 2: pick the MOST specific signal from the notes — a software name, a quoted frustration, a hard number. Write it concretely. If notes only give general context, use headcount + sector. Never write "suivi et coordination" or anything vague.
+5. Sentence 3: name the exact Factorial module or outcome that fixes that pain. "gestion RH" is forbidden — say "module Absences", "module Temps de travail", "automatiser les contrats", etc.
+6. Add a blank line between each sentence for readability.
+7. End with (use exactly): "{closing}"
+8. Then the link sentence: "Le lien / El enlace / Der Link is dans l'invitation / en la invitación / in der Einladung."
 7. FORBIDDEN: "optimizar procesos", "solución completa", generic phrases, asking questions, mentioning SDR.
 
 OUTPUT FORMAT (keep delimiters, no extra text outside them):
@@ -140,7 +149,9 @@ def analyze_and_generate(context: dict) -> tuple[str | None, str | None]:
     lang    = _detect_language(country)
     print(f"[→] Language detected: {lang} (country='{country}')")
 
-    owner_name    = f"{owner.get('firstName','')} {owner.get('lastName','')}".strip() or "N/A"
+    owner_name    = f"{owner.get('firstName','')} {owner.get('lastName','')}".strip() \
+                    or os.environ.get("AE_NAME", "").strip() \
+                    or "tu Account Executive"
     contact_name  = f"{contact.get('firstname','')} {contact.get('lastname','')}".strip() or "N/A"
     contact_first = contact_name.split()[0] if contact_name != "N/A" else "there"
 
