@@ -1,35 +1,18 @@
 import os
 import re
-import requests
+from groq import Groq
 
-# ── Azure AI Foundry — config from env ───────────────────────────────────────
-_AZURE_API_VER = "2025-01-01-preview"
+_GROQ_MODEL = "llama-3.3-70b-versatile"
 
 
 def _call(prompt: str, max_tokens: int = 4000) -> str:
-    raw_endpoint = os.environ["AZURE_ANTHROPIC_ENDPOINT"].rstrip("/")
-    model        = os.environ["AZURE_ANTHROPIC_MODEL"]
-    api_key      = os.environ["AZURE_ANTHROPIC_API_KEY"]
-
-    # Strip /anthropic suffix if already in endpoint to avoid duplication
-    base = raw_endpoint[:-len("/anthropic")] if raw_endpoint.endswith("/anthropic") else raw_endpoint
-
-    resp = requests.post(
-        f"{base}/anthropic/v1/messages?api-version={_AZURE_API_VER}",
-        headers={
-            "api-key":           api_key,
-            "Content-Type":      "application/json",
-            "anthropic-version": "2023-06-01",
-        },
-        json={
-            "model":      model,
-            "max_tokens": max_tokens,
-            "messages":   [{"role": "user", "content": prompt}],
-        },
-        timeout=120,
+    client = Groq(api_key=os.environ["GROQ_API_KEY"])
+    chat = client.chat.completions.create(
+        model=_GROQ_MODEL,
+        max_tokens=max_tokens,
+        messages=[{"role": "user", "content": prompt}],
     )
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"].strip()
+    return chat.choices[0].message.content.strip()
 
 
 # ── Master prompt ─────────────────────────────────────────────────────────────
