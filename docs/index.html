@@ -231,9 +231,11 @@
             </div>
           </div>
           <div id="owner-dropdown" class="owner-dropdown hidden mt-2 p-1.5"></div>
-          <div id="owner-load-error" class="hidden mt-3 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-xs text-center">
-            Could not load owners — check your HubSpot token &amp; proxy URL.
-            <button onclick="allOwners=[];ownerMap={};loadOwners()" class="underline ml-1 font-semibold">Retry</button>
+          <div id="owner-load-error" class="hidden mt-3 p-3 rounded-xl text-xs" style="background:#FFF0F0;border:1px solid #FFB3B3;color:#C00;">
+            <p class="font-semibold mb-1">Could not load owners</p>
+            <p id="owner-load-error-msg" class="mb-2 font-mono break-all"></p>
+            <p class="mb-2">Check: proxy URL is set · HubSpot token has <code class="bg-red-100 px-1 rounded">crm.objects.owners.read</code> scope</p>
+            <button onclick="allOwners=[];ownerMap={};loadOwners()" class="underline font-semibold">Retry</button>
           </div>
 
           <div id="owner-selected-box" class="hidden mt-4 px-4 py-3 flex items-center justify-between rounded-xl" style="background:var(--red-weak);border:1px solid #FFB3C6;">
@@ -468,6 +470,7 @@ async function loadOwners() {
     })).filter(o => o.name);
     ownerMap = Object.fromEntries(allOwners.map(o => [o.id, o]));
   } catch (e) {
+    document.getElementById('owner-load-error-msg').textContent = e.message;
     document.getElementById('owner-load-error').classList.remove('hidden');
   } finally {
     document.getElementById('owner-loading').classList.add('hidden');
