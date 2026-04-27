@@ -24,8 +24,11 @@ def _resolve_user_id(client: WebClient, owner_email: str | None) -> str:
     raise RuntimeError("No Slack recipient: owner email lookup failed and SLACK_USER_ID is not set.")
 
 
-def _slack(client: WebClient, channel: str, text: str):
+def _slack(client: WebClient, user_id: str, text: str):
     try:
+        # Open (or reuse) the DM channel — required for bot tokens
+        dm = client.conversations_open(users=user_id)
+        channel = dm["channel"]["id"]
         client.chat_postMessage(channel=channel, text=text, mrkdwn=True)
     except SlackApiError as e:
         print(f"[Slack error] {e.response['error']}")
