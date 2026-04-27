@@ -69,13 +69,13 @@ def _build_prompt(*, lang: str, contact_first: str, ae_name: str, meeting: str,
                   company: str, employees: str, industry: str, notes: str) -> tuple[str, str]:
 
     closing = {
-        "Spanish":    "Tienes el enlace en la invitación, no hace falta que confirmes. Un saludo,",
-        "French":     "Le lien est dans l'invitation, aucune confirmation nécessaire. Cordialement,",
-        "Portuguese": "O link está no convite, não precisas de confirmar. Com os melhores cumprimentos,",
-        "German":     "Den Link findest du in der Einladung, eine Bestätigung ist nicht nötig. Mit freundlichen Grüßen,",
-        "Italian":    "Il link è nell'invito, non è necessaria alcuna conferma. Cordiali saluti,",
-        "English":    "The link is in the invite, no need to confirm. Best regards,",
-    }.get(lang, "Tienes el enlace en la invitación, no hace falta que confirmes. Un saludo,")
+        "Spanish":    "Tienes el enlace en la invitación. Un saludo,",
+        "French":     "Le lien est dans l'invitation. À demain,",
+        "Portuguese": "O link está no convite. Até amanhã,",
+        "German":     "Den Link findest du in der Einladung. Bis morgen,",
+        "Italian":    "Il link è nell'invito. A domani,",
+        "English":    "The link is in the invite. See you then,",
+    }.get(lang, "Tienes el enlace en la invitación. Un saludo,")
 
     system = f"""You are {ae_name}, an Account Executive at Factorial (HR software).
 You are writing a pre-demo email to {contact_first}.
@@ -105,7 +105,13 @@ OUTPUT FORMAT (keep delimiters, no extra text outside them):
 EMAIL_START
 [subject line in {lang} — mention a specific tool/pain/number, never generic]
 
-[email body]
+[sentence 1]
+
+[sentence 2]
+
+[sentence 3]
+
+[sentence 4 — use exactly: "{closing}"]
 
 {ae_name}
 Account Executive — Factorial
