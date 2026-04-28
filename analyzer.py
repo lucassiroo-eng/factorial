@@ -1,11 +1,10 @@
 import os
 import re
 import datetime
-import requests
+import anthropic
 
-_AZURE_ENDPOINT = "https://partners-bizdev-ai.services.ai.azure.com"
+_AZURE_BASE_URL = "https://partners-bizdev-ai.services.ai.azure.com/anthropic/v1"
 _AZURE_MODEL    = "claude-opus-4-6"
-_AZURE_API_VER  = "2025-01-01-preview"
 
 # ── Language detection — done in Python, never delegated to the model ─────────
 
@@ -59,26 +58,19 @@ def _format_meeting(raw, lang: str = "Spanish") -> str:
 # ── LLM call ──────────────────────────────────────────────────────────────────
 
 def _call(system: str, user: str) -> str:
-    url = f"{_AZURE_ENDPOINT}/anthropic/v1/messages?api-version={_AZURE_API_VER}"
-    resp = requests.post(
-        url,
-        headers={
-            "api-key":           os.environ["AZURE_CONFIG"].strip(),
-            "Content-Type":      "application/json",
-            "anthropic-version": "2023-06-01",
-        },
-        json={
-            "model":      _AZURE_MODEL,
-            "max_tokens": 2000,
-            "system":     system,
-            "messages":   [{"role": "user", "content": user}],
-        },
-        timeout=120,
+    key    = os.environ["AZURE_CONFIG"].strip()
+    client = anthropic.Anthropic(
+        api_key=key,
+        base_url=_AZURE_BASE_URL,
+        default_headers={"api-key": key},
     )
-    if not resp.ok:
-        print(f"[!] Azure {resp.status_code}: {resp.text[:300]}")
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"].strip()
+    msg = client.messages.create(
+        model=_AZURE_MODEL,
+        max_tokens=2000,
+        system=system,
+        messages=[{"role": "user", "content": user}],
+    )
+    return msg.content[0].text.strip()
 
 
 # ── Prompt builders ───────────────────────────────────────────────────────────
