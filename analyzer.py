@@ -1,11 +1,20 @@
 import os
 import re
+import json
 import datetime
 import requests
 
-_AZURE_ENDPOINT = "https://partners-bizdev-ai.services.ai.azure.com/anthropic"
-_AZURE_MODEL    = "claude-opus-4-6"
-_AZURE_API_VER  = "2025-01-01-preview"
+_AZURE_API_VER = "2025-01-01-preview"
+
+
+def _azure_cfg() -> dict:
+    raw = os.environ["AZURE_CONFIG"]
+    cfg = json.loads(raw)
+    endpoint = cfg["endpoint"].rstrip("/")
+    # Strip trailing /anthropic to avoid duplication
+    if endpoint.endswith("/anthropic"):
+        endpoint = endpoint[:-len("/anthropic")]
+    return {"endpoint": endpoint, "model": cfg["model"], "key": cfg["key"]}
 
 # ── Language detection — done in Python, never delegated to the model ─────────
 
@@ -59,15 +68,16 @@ def _format_meeting(raw, lang: str = "Spanish") -> str:
 # ── LLM call ──────────────────────────────────────────────────────────────────
 
 def _call(system: str, user: str) -> str:
+    cfg  = _azure_cfg()
     resp = requests.post(
-        f"{_AZURE_ENDPOINT}/v1/messages?api-version={_AZURE_API_VER}",
+        f"{cfg['endpoint']}/anthropic/v1/messages?api-version={_AZURE_API_VER}",
         headers={
-            "api-key":           os.environ["AZURE_ANTHROPIC_API_KEY"],
+            "api-key":           cfg["key"],
             "Content-Type":      "application/json",
             "anthropic-version": "2023-06-01",
         },
         json={
-            "model":      _AZURE_MODEL,
+            "model":      cfg["model"],
             "max_tokens": 2000,
             "system":     system,
             "messages":   [{"role": "user", "content": user}],
