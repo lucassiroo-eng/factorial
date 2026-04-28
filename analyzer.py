@@ -69,8 +69,11 @@ def _format_meeting(raw, lang: str = "Spanish") -> str:
 
 def _call(system: str, user: str) -> str:
     cfg  = _azure_cfg()
+    url  = f"{cfg['endpoint']}/anthropic/v1/messages?api-version={_AZURE_API_VER}"
+    print(f"[→] Azure URL: {url}")
+    print(f"[→] Model: {cfg['model']} | Key prefix: {cfg['key'][:8]}...")
     resp = requests.post(
-        f"{cfg['endpoint']}/anthropic/v1/messages?api-version={_AZURE_API_VER}",
+        url,
         headers={
             "api-key":           cfg["key"],
             "Content-Type":      "application/json",
@@ -84,6 +87,8 @@ def _call(system: str, user: str) -> str:
         },
         timeout=120,
     )
+    if not resp.ok:
+        print(f"[!] Azure error {resp.status_code}: {resp.text[:500]}")
     resp.raise_for_status()
     return resp.json()["content"][0]["text"].strip()
 
