@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="owners.js"></script>
   <style>
     :root {
       --red:        #FF355E;
@@ -395,6 +396,7 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('proxy-url-input').value = proxyUrl;
   populateMarketSelect();
   checkTokenWarning();
+  loadOwners();
 });
 
 function checkTokenWarning() {
@@ -434,24 +436,20 @@ function selectMode(m) {
 }
 
 // ── Owner autocomplete ────────────────────────────────────────────────────────
-async function loadOwners() {
+function loadOwners() {
   if (allOwners.length) return;
-  document.getElementById('owner-loading').classList.remove('hidden');
   document.getElementById('owner-load-error').classList.add('hidden');
-  try {
-    const data = await hsGet('/crm/v3/owners?limit=100');
-    allOwners = (data.results || []).map(o => ({
-      id:    String(o.id),
-      name:  (`${o.firstName||''} ${o.lastName||''}`).trim() || o.email || '',
-      email: o.email || '',
-    })).filter(o => o.name);
-    ownerMap = Object.fromEntries(allOwners.map(o => [o.id, o]));
-  } catch (e) {
-    document.getElementById('owner-load-error-msg').textContent = e.message;
+  const raw = window.FACTORIAL_OWNERS || [];
+  if (!raw.length) {
+    document.getElementById('owner-load-error-msg').textContent = 'owners.js not loaded';
     document.getElementById('owner-load-error').classList.remove('hidden');
-  } finally {
-    document.getElementById('owner-loading').classList.add('hidden');
+    return;
   }
+  allOwners = raw
+    .filter(o => o.name && o.email)
+    .map(o => ({ id: String(o.id), name: o.name, email: o.email, markets: o.markets || [] }));
+  ownerMap = Object.fromEntries(allOwners.map(o => [o.id, o]));
+  document.getElementById('owner-loading').classList.add('hidden');
 }
 
 function filterOwners(q) {
@@ -554,16 +552,32 @@ function showRecipientDropdown() {
   const q = document.getElementById('recipient-search').value.trim();
   if (q) { filterRecipient(q); return; }
   const box = document.getElementById('recipient-dropdown');
-  const ownerRows = allOwners.slice(0, 5).map(o => `
+
+  // Owners for the active market go first, then the rest
+  const activeMarket = mode === 'market'
+    ? document.getElementById('market-select').value
+    : (chosenOwner?.markets?.[0] || '');
+
+  const inMarket  = activeMarket ? allOwners.filter(o => o.markets?.includes(activeMarket)) : [];
+  const outMarket = allOwners.filter(o => !inMarket.includes(o));
+
+  const renderRow = o => `
     <div class="owner-option" onclick="selectRecipient('${o.id}')">
       <p class="font-medium text-sm" style="color:var(--midnight);">${escHtml(o.name)}</p>
       <p class="text-xs" style="color:var(--ink-400);">${escHtml(o.email)}</p>
-    </div>`).join('');
-  box.innerHTML = ownerRows + `
-    <div class="owner-option" onclick="selectAdmin()" style="${ownerRows ? 'border-top:1px solid var(--border);margin-top:4px;padding-top:10px;' : ''}">
-      <p class="font-medium text-sm" style="color:var(--midnight);">Lucas Siroo</p>
-      <p class="text-xs" style="color:var(--ink-400);">Enviar a Admin</p>
     </div>`;
+
+  let html = '';
+  if (inMarket.length) {
+    html += `<p class="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide" style="color:var(--ink-400);">${escHtml(activeMarket)}</p>`;
+    html += inMarket.map(renderRow).join('');
+  }
+  if (outMarket.length) {
+    html += `<p class="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide" style="color:var(--ink-400);${inMarket.length ? 'border-top:1px solid var(--border);margin-top:4px;' : ''}">Other</p>`;
+    html += outMarket.slice(0, 6).map(renderRow).join('');
+  }
+
+  box.innerHTML = html || '<p class="text-sm px-3 py-2" style="color:var(--ink-400);">No owners loaded yet</p>';
   box.classList.remove('hidden');
 }
 

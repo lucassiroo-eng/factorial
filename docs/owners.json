@@ -1,0 +1,404 @@
+{
+  "owners": [
+    {
+      "id": "32980204",
+      "name": "Sonia Cardoso",
+      "email": "sonia.cardoso@factorial.co",
+      "markets": [
+        "Portugal"
+      ]
+    },
+    {
+      "id": "521128565",
+      "name": "Ada Morillo",
+      "email": "ada.morillo@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "32832843",
+      "name": "Alessandro Falbo",
+      "email": "alessandro.falbo@factorial.co",
+      "markets": [
+        "Italy"
+      ]
+    },
+    {
+      "id": "86686795",
+      "name": "Alexander Ulrich",
+      "email": "alexander.ulrich@factorial.co",
+      "markets": [
+        "Germany"
+      ]
+    },
+    {
+      "id": "80044074",
+      "name": "Alix Moreno",
+      "email": "alix.moreno@factorial.co",
+      "markets": [
+        "France"
+      ]
+    },
+    {
+      "id": "79892359",
+      "name": "Ayoub El abd",
+      "email": "ayoub.elabd@factorial.co",
+      "markets": [
+        "France"
+      ]
+    },
+    {
+      "id": "390622979",
+      "name": "Ayoub Meheni",
+      "email": "ayoub.meheni@factorial.co",
+      "markets": [
+        "France"
+      ]
+    },
+    {
+      "id": "554650133",
+      "name": "Belen Lombardia",
+      "email": "belen.lombardia@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "84994645",
+      "name": "Blanca Jiménez-Fontes",
+      "email": "blanca.jimenez@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "2078231828",
+      "name": "Carlos Sanchez",
+      "email": "carlos.sanchez@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "86980724",
+      "name": "Christian Lombardo",
+      "email": "christian.lombardo@factorial.co",
+      "markets": [
+        "Italy"
+      ]
+    },
+    {
+      "id": "558202936",
+      "name": "Daniel Terrasa",
+      "email": "daniel.terrasa@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "84683811",
+      "name": "Daniele Pollifrone",
+      "email": "daniele.pollifrone@factorial.co",
+      "markets": [
+        "Italy"
+      ]
+    },
+    {
+      "id": "77408863",
+      "name": "David Clemente",
+      "email": "david.clemente@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "86687949",
+      "name": "Edoardo Rapezzi",
+      "email": "edoardo.rapezzi@factorial.co",
+      "markets": [
+        "Italy"
+      ]
+    },
+    {
+      "id": "561316186",
+      "name": "Eduardo Zafra",
+      "email": "eduardo.zafra@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "30288950",
+      "name": "Elisa Delchmann",
+      "email": "elisa.delchmann@factorial.co",
+      "markets": [
+        "Germany"
+      ]
+    },
+    {
+      "id": "265884723",
+      "name": "Emanuele Fioretti",
+      "email": "emanuele.fioretti@factorial.co",
+      "markets": [
+        "Italy"
+      ]
+    },
+    {
+      "id": "77408871",
+      "name": "Emilio Fabbro",
+      "email": "emilio.fabbro@factorial.co",
+      "markets": [
+        "Italy"
+      ]
+    },
+    {
+      "id": "86688154",
+      "name": "Fanny Haurot",
+      "email": "fanny.haurot@factorial.co",
+      "markets": [
+        "France"
+      ]
+    },
+    {
+      "id": "82847646",
+      "name": "Federico Sangalli",
+      "email": "federico.sangalli@factorial.co",
+      "markets": [
+        "Italy"
+      ]
+    },
+    {
+      "id": "32147416",
+      "name": "Giovanni Laghi",
+      "email": "giovanni.laghi@factorial.co",
+      "markets": [
+        "Italy"
+      ]
+    },
+    {
+      "id": "33206991",
+      "name": "Gustavo Nunes",
+      "email": "gustavo.nunes@factorial.co",
+      "markets": [
+        "Portugal"
+      ]
+    },
+    {
+      "id": "600500130",
+      "name": "Ilaria Scognamiglio",
+      "email": "ilaria.scognamiglio@factorial.co",
+      "markets": [
+        "Italy"
+      ]
+    },
+    {
+      "id": "32147393",
+      "name": "Joao Duarte",
+      "email": "joao.duarte@factorial.co",
+      "markets": [
+        "Portugal"
+      ]
+    },
+    {
+      "id": "554650010",
+      "name": "Jose Donis",
+      "email": "jose.donis@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "673855792",
+      "name": "Katharina Paul",
+      "email": "katharina.paul@factorial.co",
+      "markets": [
+        "Germany"
+      ]
+    },
+    {
+      "id": "83903815",
+      "name": "Katrin Virtbauer",
+      "email": "katrin.virtbauer@factorial.co",
+      "markets": [
+        "Germany"
+      ]
+    },
+    {
+      "id": "80791735",
+      "name": "Leonhard Zeus",
+      "email": "leonhard.zeus@factorial.co",
+      "markets": [
+        "Germany"
+      ]
+    },
+    {
+      "id": "78959951",
+      "name": "Manuele De Pasqual",
+      "email": "manuele.depasqual@factorial.co",
+      "markets": [
+        "Italy"
+      ]
+    },
+    {
+      "id": "187721367",
+      "name": "Marco Falaschetti",
+      "email": "marco.falaschetti@factorial.co",
+      "markets": [
+        "Italy"
+      ]
+    },
+    {
+      "id": "89048563",
+      "name": "Marta Almeida",
+      "email": "marta.almeida@factorial.co",
+      "markets": [
+        "Portugal"
+      ]
+    },
+    {
+      "id": "1075307629",
+      "name": "Marta Puerta",
+      "email": "marta.puerta@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "409643609",
+      "name": "Matthias Rigault",
+      "email": "matthias.rigault@factorial.co",
+      "markets": [
+        "France"
+      ]
+    },
+    {
+      "id": "80043976",
+      "name": "Maxime Mohring",
+      "email": "maxime.mohring@factorial.co",
+      "markets": [
+        "France"
+      ]
+    },
+    {
+      "id": "82431724",
+      "name": "Miguel Vasconcelos",
+      "email": "miguel.vasconcelos@factorial.co",
+      "markets": [
+        "Portugal"
+      ]
+    },
+    {
+      "id": "32980095",
+      "name": "Mireia Serrano",
+      "email": "mireia.serrano@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "645417472",
+      "name": "Nerea Urien Meizoso",
+      "email": "nerea.urien@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "86687084",
+      "name": "Niklas Mürau",
+      "email": "niklas.murau@factorial.co",
+      "markets": [
+        "Germany"
+      ]
+    },
+    {
+      "id": "32832902",
+      "name": "Paolo Mezzarobba",
+      "email": "paolo.mezzarobba@factorial.co",
+      "markets": [
+        "Italy"
+      ]
+    },
+    {
+      "id": "105443852",
+      "name": "Pol Bartolomé",
+      "email": "pol.bartolome@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "430319201",
+      "name": "Rita Dias",
+      "email": "rita.dias@factorial.co",
+      "markets": [
+        "Portugal"
+      ]
+    },
+    {
+      "id": "85923521",
+      "name": "Rodrigo Cortez",
+      "email": "rodrigo.cortez@factorial.co",
+      "markets": [
+        "Portugal"
+      ]
+    },
+    {
+      "id": "86980969",
+      "name": "Stefan Platt",
+      "email": "stefan.platt@factorial.co",
+      "markets": [
+        "Germany"
+      ]
+    },
+    {
+      "id": "187723906",
+      "name": "Thomas Pavion",
+      "email": "thomas.pavion@factorial.co",
+      "markets": [
+        "France"
+      ]
+    },
+    {
+      "id": "79352750",
+      "name": "Tiago Cunha",
+      "email": "tiago.cunha@factorial.co",
+      "markets": [
+        "Portugal"
+      ]
+    },
+    {
+      "id": "76548259",
+      "name": "Vicente Peña Blanco",
+      "email": "vicente.pena@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "76824216",
+      "name": "Xavier Fortuny",
+      "email": "xavier.fortuny@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "722091132",
+      "name": "Xavier Martí",
+      "email": "xavier.marti@factorial.co",
+      "markets": [
+        "Spain"
+      ]
+    },
+    {
+      "id": "81399018",
+      "name": "vincent DI SCHINO",
+      "email": "vincent.dischino@factorial.co",
+      "markets": [
+        "France"
+      ]
+    }
+  ]
+}

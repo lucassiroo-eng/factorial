@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 import calendar
 import datetime
@@ -206,6 +207,25 @@ class HubSpotClient:
         print(f"[✓] Loaded {len(result)} owner(s).")
         return result
 
+    def _load_owners_map(self) -> dict:
+        """Returns {owner_id: {name, email}} — paginates until all owners are loaded."""
+        result, after = {}, None
+        while True:
+            params = {"limit": 100}
+            if after:
+                params["after"] = after
+            r = self._get(f"{HUBSPOT_BASE}/crm/v3/owners", params=params)
+            if not r.ok:
+                break
+            data = r.json()
+            for o in data.get("results", []):
+                name = f"{o.get('firstName') or ''} {o.get('lastName') or ''}".strip()
+                result[str(o["id"])] = {"name": name, "email": o.get("email", "")}
+            after = data.get("paging", {}).get("next", {}).get("after")
+            if not after:
+                break
+        return result
+
     def get_deal_notes(self, deal_id: str) -> list:
         resp = self._get(f"{HUBSPOT_BASE}/crm/v4/objects/deals/{deal_id}/associations/notes")
         resp.raise_for_status()
@@ -251,6 +271,34 @@ class HubSpotClient:
                 })
         notes.sort(key=lambda n: n.get("timestamp") or "", reverse=True)
         return notes
+
+    def get_owners_by_market(self, market: str, owners_map: dict, limit: int = 50) -> list[dict]:
+        """
+        Returns unique owners from the last `limit` deals for a market.
+        Uses hubspot_owner_id from the deal property — no per-owner API call.
+        owners_map: {owner_id: {name, email}} pre-loaded via _load_owners_map().
+        """
+        payload = {
+            "filterGroups": [{"filters": [
+                {"propertyName": "pipeline",            "operator": "EQ", "value": PIPELINE_IDS["partners distribution"]},
+                {"propertyName": "country_qobra_samba", "operator": "EQ", "value": market},
+            ]}],
+            "properties": ["hubspot_owner_id"],
+            "sorts": [{"propertyName": "first_meeting_at", "direction": "DESCENDING"}],
+            "limit": limit,
+        }
+        resp = self._post(f"{HUBSPOT_BASE}/crm/v3/objects/deals/search", json=payload)
+        resp.raise_for_status()
+
+        seen, owners = set(), []
+        for deal in resp.json().get("results", []):
+            oid = deal.get("properties", {}).get("hubspot_owner_id")
+            if not oid or oid in seen:
+                continue
+            seen.add(oid)
+            info = owners_map.get(str(oid), {})
+            owners.append({"id": oid, "name": info.get("name", oid), "email": info.get("email", "")})
+        return owners
 
     def get_full_context(self, deal: dict) -> dict:
         did = deal["id"]
