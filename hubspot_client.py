@@ -28,8 +28,9 @@ def _fallback_owner() -> dict:
     """Returns owner dict from AE_NAME / AE_EMAIL env vars when HubSpot scope is missing."""
     name  = os.environ.get("AE_NAME", "").strip()
     email = os.environ.get("AE_EMAIL", "").strip()
-    first, *rest = name.split(" ", 1) if name else ("", [])
-    last = rest[0] if rest else ""
+    parts = name.split(" ", 1) if name else []
+    first = parts[0] if parts else ""
+    last  = parts[1] if len(parts) > 1 else ""
     if name:
         print(f"[→] Owner fallback: {name} <{email}>")
     return {"firstName": first, "lastName": last, "email": email}
