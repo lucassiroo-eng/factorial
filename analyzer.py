@@ -1,7 +1,7 @@
 import os
 import re
 import datetime
-import anthropic
+import requests
 
 def _azure_cfg() -> tuple[str, str, str]:
     """Parse AZURE_CONFIG secret: 'endpoint|model|key'"""
@@ -68,19 +68,29 @@ def _format_meeting(raw, lang: str = "Spanish") -> str:
 # ── LLM call ──────────────────────────────────────────────────────────────────
 
 def _call(system: str, user: str) -> str:
-    base_url, model, key = _azure_cfg()
-    client = anthropic.Anthropic(
-        api_key=key,
-        base_url=base_url,
-        default_headers={"api-key": key},
+    endpoint, model, key = _azure_cfg()
+    # endpoint already ends with /anthropic/v1 — strip back to base for URL construction
+    base = endpoint.replace("/anthropic/v1", "").replace("/anthropic", "").rstrip("/")
+    url  = f"{base}/anthropic/v1/messages?api-version=2025-01-01-preview"
+    resp = requests.post(
+        url,
+        headers={
+            "api-key":           key,
+            "Content-Type":      "application/json",
+            "anthropic-version": "2023-06-01",
+        },
+        json={
+            "model":      model,
+            "max_tokens": 2000,
+            "system":     system,
+            "messages":   [{"role": "user", "content": user}],
+        },
+        timeout=120,
     )
-    msg = client.messages.create(
-        model=model,
-        max_tokens=2000,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
-    return msg.content[0].text.strip()
+    if not resp.ok:
+        print(f"[!] Azure {resp.status_code}: {resp.text[:300]}")
+    resp.raise_for_status()
+    return resp.json()["content"][0]["text"].strip()
 
 
 # ── Prompt builders ───────────────────────────────────────────────────────────
