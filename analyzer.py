@@ -3,8 +3,18 @@ import re
 import datetime
 import anthropic
 
-_AZURE_BASE_URL = "https://partners-bizdev-ai.services.ai.azure.com/anthropic/v1"
-_AZURE_MODEL    = "claude-opus-4-6"
+def _azure_cfg() -> tuple[str, str, str]:
+    """Parse AZURE_CONFIG secret: 'endpoint|model|key'"""
+    raw = os.environ["AZURE_CONFIG"].strip()
+    parts = raw.split("|")
+    if len(parts) != 3:
+        raise ValueError(f"AZURE_CONFIG must be 'endpoint|model|key', got {len(parts)} parts")
+    endpoint, model, key = [p.strip() for p in parts]
+    # Ensure base URL ends at /v1
+    base = endpoint.rstrip("/")
+    if not base.endswith("/v1"):
+        base = base.rstrip("/anthropic").rstrip("/") + "/anthropic/v1"
+    return base, model, key
 
 # ── Language detection — done in Python, never delegated to the model ─────────
 
@@ -58,14 +68,14 @@ def _format_meeting(raw, lang: str = "Spanish") -> str:
 # ── LLM call ──────────────────────────────────────────────────────────────────
 
 def _call(system: str, user: str) -> str:
-    key    = os.environ["AZURE_CONFIG"].strip()
+    base_url, model, key = _azure_cfg()
     client = anthropic.Anthropic(
         api_key=key,
-        base_url=_AZURE_BASE_URL,
+        base_url=base_url,
         default_headers={"api-key": key},
     )
     msg = client.messages.create(
-        model=_AZURE_MODEL,
+        model=model,
         max_tokens=2000,
         system=system,
         messages=[{"role": "user", "content": user}],
