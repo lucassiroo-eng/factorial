@@ -98,62 +98,39 @@ def _call(system: str, user: str) -> str:
 def _build_prompt(*, lang: str, contact_first: str, ae_name: str, meeting: str,
                   company: str, employees: str, industry: str, notes: str) -> tuple[str, str]:
 
-    closing = {
-        "Spanish":    "¡Hasta mañana!",
-        "French":     "À demain !",
-        "Portuguese": "Até amanhã!",
-        "German":     "Bis morgen!",
-        "Italian":    "A domani!",
-        "English":    "See you then!",
-    }.get(lang, "¡Hasta mañana!")
-
     system = f"""You are {ae_name}, an Account Executive at Factorial (HR software).
-You are writing a pre-demo email to {contact_first}.
-LANGUAGE RULE: Write 100% in {lang}. Every single word must be in {lang}. No exceptions."""
+Write entirely in {lang}. Not a single word in any other language."""
 
-    user = f"""Write a pre-demo confirmation email in {lang}.
+    user = f"""Write a short pre-demo email to {contact_first} before our demo on {meeting}.
 
-DATA:
-- Contact first name: {contact_first}
-- Your name (AE): {ae_name}
-- Demo date/time: {meeting}
+Context:
 - Company: {company} | {employees} employees | {industry}
+- AE sending this: {ae_name}
 - Notes from sales calls:
 {notes}
 
-EMAIL RULES:
-1. Exactly 3-4 short sentences.
-2. Every word in {lang} — absolutely no mixing.
-3. Sentence 1: greet {contact_first} by name, introduce yourself as "{ae_name}, Account Executive at Factorial", confirm the exact demo date "{meeting}".
-4. Sentence 2: acknowledge their pain with empathy first, then name the specific signal (software, frustration, hard number). Example: "Je sais que gérer X manuellement avec [outil] vous coûte du temps — c'est exactement ce qu'on va adresser." Show you understand, not just that you read their file.
-5. Sentence 3: name the exact Factorial module or outcome that fixes that pain. "gestion RH" is forbidden — say "module Absences", "module Temps de travail", "automatiser les contrats", etc.
-6. Add a blank line between each sentence for readability.
-7. End with (use exactly): "{closing}"
-8. Then the link sentence: "Le lien / El enlace / Der Link is dans l'invitation / en la invitación / in der Einladung."
-7. FORBIDDEN: "optimizar procesos", "solución completa", generic phrases, asking questions, mentioning SDR.
+Guidelines (not rigid rules — use your judgement):
+- 3-4 sentences, casual and human, not corporate
+- Show you understood their specific situation from the notes
+- Mention a concrete Factorial module or outcome relevant to their pain
+- Short warm closing, no need to ask for confirmation
+- Blank line between each sentence
 
-OUTPUT FORMAT (keep delimiters, no extra text outside them):
+Then write a brief internal recap.
+
+OUTPUT FORMAT:
 
 EMAIL_START
-[subject line in {lang} — mention a specific tool/pain/number, never generic]
+[subject line — specific to their situation]
 
-[sentence 1]
-
-[sentence 2]
-
-[sentence 3]
-
-[sentence 4 — use exactly: "{closing}"]
+[email]
 
 {ae_name}
 Account Executive — Factorial
 EMAIL_END
 
 RECAP_START
-PAIN: [exact quote or paraphrase from notes]
-HOOK: [why this angle]
-RISKS: [2 things that could kill the deal]
-OPEN WITH: [2 demo-opening questions]
+[key signals found, risks, 2 questions to open the demo with]
 RECAP_END"""
 
     return system, user
