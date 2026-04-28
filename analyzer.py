@@ -75,7 +75,7 @@ def _call(system: str, user: str) -> str:
     resp = requests.post(
         url,
         headers={
-            "api-key":           key,
+            "Authorization":     f"Bearer {key}",
             "Content-Type":      "application/json",
             "anthropic-version": "2023-06-01",
         },
