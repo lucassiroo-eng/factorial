@@ -69,9 +69,10 @@ def _format_meeting(raw, lang: str = "Spanish") -> str:
 
 def _call(system: str, user: str) -> str:
     cfg  = _azure_cfg()
-    url  = f"{cfg['endpoint']}/anthropic/v1/messages?api-version={_AZURE_API_VER}"
+    # Azure AI Foundry: deployment name goes in the URL path
+    url = f"{cfg['endpoint']}/anthropic/deployments/{cfg['model']}/v1/messages?api-version={_AZURE_API_VER}"
     print(f"[→] Azure URL: {url}")
-    print(f"[→] Model: {cfg['model']} | Key prefix: {cfg['key'][:8]}...")
+    print(f"[→] Key prefix: {cfg['key'][:8]}...")
     resp = requests.post(
         url,
         headers={
@@ -80,7 +81,6 @@ def _call(system: str, user: str) -> str:
             "anthropic-version": "2023-06-01",
         },
         json={
-            "model":      cfg["model"],
             "max_tokens": 2000,
             "system":     system,
             "messages":   [{"role": "user", "content": user}],
