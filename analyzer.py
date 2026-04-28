@@ -59,7 +59,6 @@ def _format_meeting(raw, lang: str = "Spanish") -> str:
 # ── LLM call ──────────────────────────────────────────────────────────────────
 
 def _call(system: str, user: str) -> str:
-    cfg  = _azure_cfg()
     url = f"{_AZURE_ENDPOINT}/anthropic/v1/messages?api-version={_AZURE_API_VER}"
     resp = requests.post(
         url,
