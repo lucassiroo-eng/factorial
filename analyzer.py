@@ -69,28 +69,39 @@ def _format_meeting(raw, lang: str = "Spanish") -> str:
 
 def _call(system: str, user: str) -> str:
     cfg  = _azure_cfg()
-    # Azure AI Foundry: deployment name goes in the URL path
-    url = f"{cfg['endpoint']}/anthropic/deployments/{cfg['model']}/v1/messages?api-version={_AZURE_API_VER}"
-    print(f"[→] Azure URL: {url}")
-    print(f"[→] Key prefix: {cfg['key'][:8]}...")
-    resp = requests.post(
-        url,
-        headers={
-            "api-key":           cfg["key"],
-            "Content-Type":      "application/json",
-            "anthropic-version": "2023-06-01",
+    key  = cfg["key"]
+    body = {
+        "model":      cfg["model"],
+        "max_tokens": 2000,
+        "system":     system,
+        "messages":   [{"role": "user", "content": user}],
+    }
+
+    # Try both URL/auth formats that Azure AI Foundry supports
+    attempts = [
+        {
+            "url": f"{cfg['endpoint']}/anthropic/v1/messages?api-version={_AZURE_API_VER}",
+            "headers": {"api-key": key, "Content-Type": "application/json", "anthropic-version": "2023-06-01"},
         },
-        json={
-            "max_tokens": 2000,
-            "system":     system,
-            "messages":   [{"role": "user", "content": user}],
+        {
+            "url": f"{cfg['endpoint']}/anthropic/v1/messages?api-version={_AZURE_API_VER}",
+            "headers": {"Authorization": f"Bearer {key}", "Content-Type": "application/json", "anthropic-version": "2023-06-01"},
         },
-        timeout=120,
-    )
-    if not resp.ok:
-        print(f"[!] Azure error {resp.status_code}: {resp.text[:500]}")
-    resp.raise_for_status()
-    return resp.json()["content"][0]["text"].strip()
+        {
+            "url": f"{cfg['endpoint']}/anthropic/deployments/{cfg['model']}/v1/messages?api-version={_AZURE_API_VER}",
+            "headers": {"api-key": key, "Content-Type": "application/json", "anthropic-version": "2023-06-01"},
+        },
+    ]
+
+    for i, attempt in enumerate(attempts):
+        print(f"[→] Attempt {i+1}: {attempt['url']}")
+        resp = requests.post(attempt["url"], headers=attempt["headers"], json=body, timeout=120)
+        print(f"    Status: {resp.status_code}")
+        if resp.ok:
+            return resp.json()["content"][0]["text"].strip()
+        print(f"    Error: {resp.text[:200]}")
+
+    raise RuntimeError("All Azure AI Foundry endpoint attempts failed — check AZURE_CONFIG secret.")
 
 
 # ── Prompt builders ───────────────────────────────────────────────────────────
