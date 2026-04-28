@@ -110,10 +110,11 @@ Context:
 {notes}
 
 Guidelines (not rigid rules — use your judgement):
-- 3-4 sentences, casual and human, not corporate
+- 3-4 sentences, professional but warm — you are a trusted consultant, not a salesperson
 - Show you understood their specific situation from the notes
 - Mention a concrete Factorial module or outcome relevant to their pain
-- Short warm closing, no need to ask for confirmation
+- Confident and direct tone — no fluff, no filler phrases
+- Short closing, no need to ask for confirmation
 - Blank line between each sentence
 
 Then write a brief internal recap.
