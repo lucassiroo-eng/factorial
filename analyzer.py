@@ -170,6 +170,9 @@ def analyze_and_generate(context: dict) -> tuple[str | None, str | None]:
         notes         = notes_text[:8000],
     )
 
+    print(f"[→] Sending to Claude — company='{company.get('name')}' contact='{contact_name}' notes_len={len(notes_text)}")
+    print(f"    Notes preview: {notes_text[:200]}")
+
     result = _call(system, user)
 
     if "NO_INFO" in result:
