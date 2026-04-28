@@ -1,9 +1,11 @@
 import os
 import re
 import datetime
-from groq import Groq
+import requests
 
-_GROQ_MODEL = "llama-3.3-70b-versatile"
+_AZURE_ENDPOINT = "https://partners-bizdev-ai.services.ai.azure.com/anthropic"
+_AZURE_MODEL    = "claude-opus-4-6"
+_AZURE_API_VER  = "2025-01-01-preview"
 
 # ── Language detection — done in Python, never delegated to the model ─────────
 
@@ -57,17 +59,23 @@ def _format_meeting(raw, lang: str = "Spanish") -> str:
 # ── LLM call ──────────────────────────────────────────────────────────────────
 
 def _call(system: str, user: str) -> str:
-    client = Groq(api_key=os.environ["GROQ_API_KEY"])
-    chat = client.chat.completions.create(
-        model=_GROQ_MODEL,
-        max_tokens=2000,
-        temperature=0.3,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user",   "content": user},
-        ],
+    resp = requests.post(
+        f"{_AZURE_ENDPOINT}/v1/messages?api-version={_AZURE_API_VER}",
+        headers={
+            "api-key":           os.environ["AZURE_ANTHROPIC_API_KEY"],
+            "Content-Type":      "application/json",
+            "anthropic-version": "2023-06-01",
+        },
+        json={
+            "model":      _AZURE_MODEL,
+            "max_tokens": 2000,
+            "system":     system,
+            "messages":   [{"role": "user", "content": user}],
+        },
+        timeout=120,
     )
-    return chat.choices[0].message.content.strip()
+    resp.raise_for_status()
+    return resp.json()["content"][0]["text"].strip()
 
 
 # ── Prompt builders ───────────────────────────────────────────────────────────

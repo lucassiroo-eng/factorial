@@ -72,7 +72,7 @@ jobs:
       - name: 🚀 Ejecutar demo prep
         env:
           HUBSPOT_API_KEY: ${{ secrets.HUBSPOT_API_KEY }}
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          AZURE_ANTHROPIC_API_KEY: ${{ secrets.AZURE_ANTHROPIC_API_KEY }}
           SLACK_TOKEN:     ${{ secrets.SLACK_TOKEN }}
           SLACK_USER_ID:   ${{ secrets.SLACK_USER_ID }}
           AE_NAME:         ${{ secrets.AE_NAME }}
