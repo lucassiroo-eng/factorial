@@ -66,7 +66,7 @@ class HubSpotClient:
         Devuelve el deal con first_meeting_at más próximo (últimos 30 días + futuro).
         filter_type: "owner" | "market"
         """
-        from_ms = str(_date_to_ms(date.today() - timedelta(days=30)))
+        from_ms = str(_date_to_ms(date.today()))
 
         base_filters = [
             {"propertyName": "first_meeting_at", "operator": "GTE", "value": from_ms},
@@ -96,7 +96,7 @@ class HubSpotClient:
             ]
         else:
             date_filters = [
-                {"propertyName": "first_meeting_at", "operator": "GTE", "value": str(_date_to_ms(date.today() - timedelta(days=30)))},
+                {"propertyName": "first_meeting_at", "operator": "GTE", "value": str(_date_to_ms(date.today()))},
             ]
 
         base_filters = [
