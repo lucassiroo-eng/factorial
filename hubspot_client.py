@@ -102,7 +102,7 @@ class HubSpotClient:
             ]
         else:
             date_filters = [
-                {"propertyName": "first_meeting_at", "operator": "GTE", "value": str(_date_to_ms(date.today() + timedelta(days=1)))},
+                {"propertyName": "first_meeting_at", "operator": "GTE", "value": str(_date_to_ms(date.today()))},
             ]
 
         base_filters = [

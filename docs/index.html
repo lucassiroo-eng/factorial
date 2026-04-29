@@ -648,12 +648,11 @@ async function searchDeals() {
   showLoading('Searching HubSpot...');
 
   try {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     const filters = [
-      { propertyName: 'first_meeting_at',  operator: 'GTE', value: String(tomorrow.getTime()) },
+      { propertyName: 'first_meeting_at',  operator: 'GTE', value: String(today.getTime()) },
       { propertyName: 'pipeline',          operator: 'EQ',  value: PIPELINE_ID },
       { propertyName: DEMO_HELD_PROP,      operator: 'NOT_HAS_PROPERTY' },
     ];
