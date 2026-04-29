@@ -368,7 +368,6 @@ let   HS_BASE       = ''; // set from proxyUrl in localStorage
 const GH_REPO       = 'lucassiroo-eng/factorial';
 const SEND_WF       = 'demo_prep.yml';
 const PIPELINE_ID   = '11834984';
-const DEMO_HELD_PROP = 'date_demo_held'; // ← verify in HubSpot Settings → Properties
 const DEAL_PROPS    = ['dealname','amount','hubspot_owner_id','first_meeting_at','industry','country_qobra_samba'];
 
 const MARKETS = [
@@ -648,13 +647,13 @@ async function searchDeals() {
   showLoading('Searching HubSpot...');
 
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const from = new Date();
+    from.setDate(from.getDate() - 30);
+    from.setHours(0, 0, 0, 0);
 
     const filters = [
-      { propertyName: 'first_meeting_at',  operator: 'GTE', value: String(today.getTime()) },
-      { propertyName: 'pipeline',          operator: 'EQ',  value: PIPELINE_ID },
-      { propertyName: DEMO_HELD_PROP,      operator: 'NOT_HAS_PROPERTY' },
+      { propertyName: 'first_meeting_at', operator: 'GTE', value: String(from.getTime()) },
+      { propertyName: 'pipeline',         operator: 'EQ',  value: PIPELINE_ID },
     ];
 
     if (mode === 'owner') {

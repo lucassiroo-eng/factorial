@@ -7,15 +7,10 @@ from datetime import date, timedelta
 
 HUBSPOT_BASE = "https://api.hubapi.com"
 
-# ── Property names (verificados con discover_properties.py) ───────────────────
-# ⚠️  Verify this property name in HubSpot: Settings → Properties → Deals
-DEMO_HELD_PROP = "date_demo_held"
-
 DEAL_PROPS = [
     "dealname", "amount", "dealstage", "hubspot_owner_id",
     "first_meeting_at", "industry",
     "country_qobra_samba",
-    DEMO_HELD_PROP,
 ]
 CONTACT_PROPS = ["firstname", "lastname", "jobtitle", "email"]
 COMPANY_PROPS = ["name", "industry", "numberofemployees", "country"]
@@ -68,15 +63,14 @@ class HubSpotClient:
 
     def get_next_future_deal(self, filter_type: str, filter_value: str) -> dict | None:
         """
-        Devuelve el deal con first_meeting_at más próximo a mañana en adelante.
+        Devuelve el deal con first_meeting_at más próximo (últimos 30 días + futuro).
         filter_type: "owner" | "market"
         """
-        tomorrow_ms = str(_date_to_ms(date.today() + timedelta(days=1)))
+        from_ms = str(_date_to_ms(date.today() - timedelta(days=30)))
 
         base_filters = [
-            {"propertyName": "first_meeting_at", "operator": "GTE", "value": tomorrow_ms},
+            {"propertyName": "first_meeting_at", "operator": "GTE", "value": from_ms},
             {"propertyName": "pipeline", "operator": "EQ", "value": PIPELINE_IDS["partners distribution"]},
-            {"propertyName": DEMO_HELD_PROP, "operator": "NOT_HAS_PROPERTY"},
             _build_filter(filter_type, filter_value),
         ]
 
@@ -102,13 +96,12 @@ class HubSpotClient:
             ]
         else:
             date_filters = [
-                {"propertyName": "first_meeting_at", "operator": "GTE", "value": str(_date_to_ms(date.today()))},
+                {"propertyName": "first_meeting_at", "operator": "GTE", "value": str(_date_to_ms(date.today() - timedelta(days=30)))},
             ]
 
         base_filters = [
             *date_filters,
             {"propertyName": "pipeline", "operator": "EQ", "value": PIPELINE_IDS["partners distribution"]},
-            {"propertyName": DEMO_HELD_PROP, "operator": "NOT_HAS_PROPERTY"},
             _build_filter(filter_type, filter_value),
         ]
 
