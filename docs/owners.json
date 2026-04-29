@@ -1,6 +1,12 @@
 {
   "owners": [
     {
+      "id": "manual_marc_sorensen",
+      "name": "Marc Sorensen",
+      "email": "marc.sorensen@factorial.co",
+      "markets": []
+    },
+    {
       "id": "32980204",
       "name": "Sonia Cardoso",
       "email": "sonia.cardoso@factorial.co",
