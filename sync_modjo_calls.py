@@ -1,9 +1,12 @@
 import os
+import sys
 import json
 import time
 import urllib.request
 import urllib.error
 from datetime import datetime, timedelta, timezone
+
+sys.stdout.reconfigure(line_buffering=True)
 
 MODJO_API_KEY = os.environ["MODJO_API_KEY"]
 SUPABASE_URL = os.environ["SUPABASE_URL"]
@@ -138,25 +141,38 @@ def transform(call: dict) -> dict:
 def scan_range(start: str, end: str, label: str = "") -> int:
     page = 1
     total_991 = 0
+    total_scanned = 0
 
-    while page <= MAX_PAGES_PER_CHUNK:
-        data = modjo_export(page, start, end)
-        pag = data.get("pagination", {})
+    data = modjo_export(page, start, end)
+    pag = data.get("pagination", {})
+    last_page = pag.get("lastPage", 1)
+    total_in_range = pag.get("totalValues", 0)
+    print(f"  [{label}] {total_in_range} calls in range, {last_page} pages")
+
+    while True:
+        if page > 1:
+            data = modjo_export(page, start, end)
+            pag = data.get("pagination", {})
+            last_page = pag.get("lastPage", 1)
+
         calls = data.get("values", [])
+        total_scanned += len(calls)
 
         matched = [transform(c) for c in calls if has_991_tag(c)]
         total_991 += len(matched)
 
         if matched:
             upsert_to_supabase(matched)
+            print(f"    page {page}/{last_page} → +{len(matched)} calls 991 (total: {total_991})")
 
-        last_page = pag.get("lastPage", 1)
-        if page >= last_page:
+        if page % 20 == 0 and not matched:
+            print(f"    page {page}/{last_page} scanning... ({total_scanned} scanned, {total_991} matched)")
+
+        if page >= last_page or page >= MAX_PAGES_PER_CHUNK:
             break
         page += 1
 
-    if total_991 > 0:
-        print(f"  {label}: {total_991} calls with 991 tag synced")
+    print(f"  [{label}] done: {total_scanned} scanned, {total_991} with 991 synced")
     return total_991
 
 

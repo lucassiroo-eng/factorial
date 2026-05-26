@@ -1,8 +1,6 @@
 name: Sync Modjo 991 calls
 
 on:
-  schedule:
-    - cron: "0 * * * *" # every hour
   workflow_dispatch:
     inputs:
       mode:
