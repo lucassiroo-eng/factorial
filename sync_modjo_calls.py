@@ -93,7 +93,7 @@ def transform(call: dict) -> dict:
 
     transcript_parts = rels.get("transcript") or []
     transcript_text = "\n".join(
-        f"[{p.get('startTime', '')}] {p.get('text', '')}"
+        f"[{p.get('startTime', '')}] {p.get('content', '')}"
         for p in transcript_parts
         if isinstance(p, dict)
     ) if isinstance(transcript_parts, list) else str(transcript_parts)
