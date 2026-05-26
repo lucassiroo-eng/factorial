@@ -1,0 +1,35 @@
+name: Sync Modjo 991 calls
+
+on:
+  schedule:
+    - cron: "0 * * * *" # every hour
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Run mode"
+        required: false
+        default: "sync"
+        type: choice
+        options:
+          - sync
+          - backfill
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run sync
+        env:
+          MODJO_API_KEY: ${{ secrets.MODJO_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          if [ "${{ inputs.mode }}" = "backfill" ]; then
+            python sync_modjo_calls.py backfill
+          else
+            python sync_modjo_calls.py
+          fi
