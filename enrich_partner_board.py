@@ -147,11 +147,7 @@ def enrich():
             skipped += 1
             continue
 
-        has_content = any((c.get("transcript") or "").strip() and not all(
-            line.strip().startswith("[") and "]" in line and line.strip().endswith("")
-            for line in (c.get("transcript") or "").strip().split("\n")[:5]
-            if line.strip()
-        ) for c in calls)
+        has_content = any(len((c.get("transcript") or "").strip()) > 50 for c in calls)
 
         if not has_content:
             # Still insert but without AI enrichment
