@@ -1,20 +1,21 @@
-name: Enrich Partner Board (full)
+name: Morning Report
 
 on:
+  schedule:
+    - cron: "0 4 * * *"  # 6am CEST
   workflow_dispatch:
 
 jobs:
-  enrich:
+  notify:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Enrich all partners with Claude
+      - name: Send Slack report
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
-          ANTHROPIC_FOUNDRY_BASE_URL: ${{ secrets.ANTHROPIC_FOUNDRY_BASE_URL }}
-          ANTHROPIC_FOUNDRY_API_KEY: ${{ secrets.ANTHROPIC_FOUNDRY_API_KEY }}
-        run: python enrich_partner_board.py --full
+          SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
+        run: python notify_slack.py

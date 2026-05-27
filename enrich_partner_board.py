@@ -149,12 +149,31 @@ def build_prompt(partner: dict, calls: list) -> str:
     return "\n".join(lines)
 
 
-def enrich():
-    now = datetime.now(timezone.utc)
-    print(f"[{now.isoformat()}] Starting partner board enrichment")
-
+def get_partners_to_enrich(incremental=True):
     partners = get_partners_with_calls()
-    print(f"  {len(partners)} matched partners to enrich")
+    if not incremental:
+        return partners
+
+    board = supabase_query("partner_board?select=contact_phone,enriched_at") or []
+    enriched_map = {r["contact_phone"]: r.get("enriched_at") for r in board}
+
+    result = []
+    for p in partners:
+        phone = p["contact_phone"]
+        enriched_at = enriched_map.get(phone)
+        last_call = p.get("last_call_at")
+        if not enriched_at or (last_call and last_call > enriched_at):
+            result.append(p)
+    return result
+
+
+def enrich(incremental=True):
+    now = datetime.now(timezone.utc)
+    mode = "incremental" if incremental else "full"
+    print(f"[{now.isoformat()}] Starting partner board enrichment ({mode})")
+
+    partners = get_partners_to_enrich(incremental)
+    print(f"  {len(partners)} partners to enrich")
 
     enriched = 0
     skipped = 0
@@ -235,4 +254,5 @@ def enrich():
 
 
 if __name__ == "__main__":
-    enrich()
+    full = "--full" in sys.argv
+    enrich(incremental=not full)

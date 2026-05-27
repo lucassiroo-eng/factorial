@@ -1,8 +1,8 @@
-name: Sync Modjo 991 calls
+name: Nightly Partner Pipeline
 
 on:
   schedule:
-    - cron: "0 */2 * * *"
+    - cron: "0 23 * * *"  # 1am CEST
   workflow_dispatch:
     inputs:
       mode:
@@ -14,13 +14,21 @@ on:
           - sync
           - backfill
       year:
-        description: "Backfill year (default 2026)"
+        description: "Backfill year"
         required: false
         default: "2026"
       month:
         description: "Backfill month (1-12)"
         required: false
         default: "5"
+      skip_enrich:
+        description: "Skip enrichment after sync"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 jobs:
   sync:
@@ -30,7 +38,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - name: Run sync
+
+      - name: Sync Modjo 991 calls
         env:
           MODJO_API_KEY: ${{ secrets.MODJO_API_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -41,3 +50,12 @@ jobs:
           else
             python sync_modjo_calls.py
           fi
+
+      - name: Enrich new partners with Claude
+        if: inputs.skip_enrich != 'true'
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          ANTHROPIC_FOUNDRY_BASE_URL: ${{ secrets.ANTHROPIC_FOUNDRY_BASE_URL }}
+          ANTHROPIC_FOUNDRY_API_KEY: ${{ secrets.ANTHROPIC_FOUNDRY_API_KEY }}
+        run: python enrich_partner_board.py

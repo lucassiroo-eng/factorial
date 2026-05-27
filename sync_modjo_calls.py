@@ -176,12 +176,12 @@ def scan_range(start: str, end: str, label: str = "") -> int:
     return total_991
 
 
-def sync(hours_back: int = 2):
+def sync(hours_back: int = 26):
     now = datetime.now(timezone.utc)
     start = (now - timedelta(hours=hours_back)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
     end = now.strftime("%Y-%m-%dT%H:%M:%S.000Z")
     print(f"[{now.isoformat()}] Sync: {start} → {end}")
-    total = scan_range(start, end, "last 2h")
+    total = scan_range(start, end, f"last {hours_back}h")
     print(f"  Done: {total} calls synced")
 
 
