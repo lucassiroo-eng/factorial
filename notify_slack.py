@@ -2,7 +2,7 @@ import os
 import sys
 import json
 import urllib.request
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 sys.stdout.reconfigure(line_buffering=True)
 
@@ -42,17 +42,19 @@ def slack_dm(text):
 
 
 def build_report():
+    since = (datetime.now(timezone.utc) - timedelta(hours=8)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
     calls = supabase_query(
         "modjo_calls?select=id,contact_phone,synced_at"
-        "&synced_at=gte." + datetime.now(timezone.utc).strftime("%Y-%m-%dT00:00:00Z")
-        + "&order=synced_at.desc"
+        f"&synced_at=gte.{since}"
+        "&order=synced_at.desc"
     )
 
     enriched = supabase_query(
         "partner_board?select=contact_phone,partner,partner_contact_name,"
         "relationship_stage,engagement,enriched_at"
-        "&enriched_at=gte." + datetime.now(timezone.utc).strftime("%Y-%m-%dT00:00:00Z")
-        + "&order=enriched_at.desc"
+        f"&enriched_at=gte.{since}"
+        "&order=enriched_at.desc"
     )
 
     total_board = supabase_query("partner_board?select=id&limit=1000")
