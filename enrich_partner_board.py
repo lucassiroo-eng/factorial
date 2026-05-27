@@ -39,6 +39,8 @@ Rules for status:
 
 def supabase_query(path, method="GET", body=None):
     url = f"{SUPABASE_URL}/rest/v1/{path}"
+    if method == "POST" and "partner_board" in path:
+        url += "?on_conflict=contact_phone"
     data = json.dumps(body).encode() if body else None
     req = urllib.request.Request(url, data=data, method=method, headers={
         "apikey": SUPABASE_SERVICE_KEY,
