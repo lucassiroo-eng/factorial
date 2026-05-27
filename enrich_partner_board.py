@@ -15,26 +15,34 @@ AZURE_API_KEY = os.environ["ANTHROPIC_FOUNDRY_API_KEY"]
 AZURE_MODEL = os.environ.get("AZURE_MODEL", "claude-sonnet-4-6")
 
 SYSTEM_PROMPT = """You are a sales intelligence analyst for Factorial (HR SaaS).
-You analyze call transcripts between Factorial reps and partner contacts (bank/telco employees who refer Factorial to their clients).
+You analyze call transcripts between Factorial PBDs (Partner Business Developers) and partner contacts.
+Partners are employees at banks or telcos (Santander, Telekom, TIM) who refer Factorial to their SMB clients.
 
-Given a partner contact's call history, extract structured insights.
-Always respond in the SAME LANGUAGE as the transcript (Spanish, German, French, or English).
+Respond in the SAME LANGUAGE as the transcript.
 
-OUTPUT FORMAT (strict JSON, no markdown):
+## DICTIONARIES — follow these strictly
+
+### relationship_stage (pick ONE):
+- "new": First interaction ever. No prior history.
+- "developing": 2-4 calls. Getting to know each other. No leads generated yet.
+- "active": 5+ calls OR partner has referred/committed to refer clients. Regular cadence.
+- "dormant": Last call was 14+ days ago AND no pending action mentioned in last call.
+
+### engagement (pick ONE, deterministic rules):
+- "Low": 1-2 calls total AND last call > 7 days ago. Or partner was unresponsive/disinterested.
+- "Medium": 3-5 calls total OR partner showed interest but no concrete commitments yet.
+- "High": 6+ calls OR partner actively generating leads, sharing contacts, scheduling joint events.
+- "Julio Iglesias": Partner is a champion. Evidence of ALL: (a) proactively sharing client lists/contacts, (b) co-organizing events or meetings, (c) advocating for Factorial internally. Reserved for exceptional partners only.
+
+## OUTPUT FORMAT (strict JSON, no markdown, no explanation):
 {
-  "status": "active|warm|cold|new",
-  "next_steps": "1-3 concrete next actions from the conversation",
-  "key_signals": "buying signals, interest indicators, or engagement patterns",
-  "blockers": "objections, risks, or blockers mentioned (or 'none')",
-  "sentiment": "positive|neutral|negative",
-  "summary": "2-3 sentence summary of the relationship and latest interaction"
-}
-
-Rules for status:
-- "active": recent call (<7 days), engaged, clear next steps
-- "warm": recent call, interested but no firm commitment
-- "cold": no recent activity or disengaged
-- "new": first call ever"""
+  "relationship_stage": "new|developing|active|dormant",
+  "engagement": "Low|Medium|High|Julio Iglesias",
+  "next_action": "1-2 concrete next actions with owner (rep or partner)",
+  "next_action_date": "YYYY-MM-DD or null if not mentioned",
+  "pains": "partner's frustrations, difficulties, or unmet needs expressed in calls (or 'none')",
+  "summary": "2-3 sentence summary of the relationship status and latest interaction"
+}"""
 
 
 def supabase_query(path, method="GET", body=None):
@@ -87,7 +95,8 @@ def call_claude(user_prompt: str) -> dict:
 def get_partners_with_calls():
     return supabase_query(
         "partner_front?in_partner_map=eq.true&select=id,contact_phone,contact_name,contact_email,"
-        "account_name,partner,partner_contact_name,call_count,last_call_at,call_ids"
+        "partner,partner_contact_name,call_count,last_call_at,call_ids,"
+        "territory,zone,partner_role,team"
         "&order=call_count.desc"
     )
 
@@ -102,18 +111,32 @@ def get_last_calls(call_ids: list, limit: int = 3) -> list:
     )
 
 
+def get_all_reps(call_ids: list) -> str:
+    if not call_ids:
+        return ""
+    ids_filter = ",".join(str(cid) for cid in call_ids)
+    calls = supabase_query(
+        f"modjo_calls?id=in.({ids_filter})&select=owner_name"
+    )
+    reps = sorted(set(c["owner_name"] for c in (calls or []) if c.get("owner_name")))
+    return ", ".join(reps)
+
+
 def build_prompt(partner: dict, calls: list) -> str:
     lines = [
         f"Partner: {partner.get('partner_contact_name') or partner.get('contact_name') or 'Unknown'}",
         f"Organization: {partner.get('partner') or 'Unknown'}",
-        f"Phone: {partner.get('contact_phone')}",
+        f"Role: {partner.get('partner_role') or 'Unknown'}",
+        f"Territory: {partner.get('territory') or 'Unknown'}",
+        f"Zone: {partner.get('zone') or 'Unknown'}",
         f"Total calls: {partner.get('call_count', 0)}",
         f"Last contact: {partner.get('last_call_at', 'unknown')[:10] if partner.get('last_call_at') else 'unknown'}",
+        f"Today: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}",
         "",
         "=== CALL TRANSCRIPTS (most recent first) ===",
     ]
     for call in calls:
-        lines.append(f"\n--- Call: {call.get('title', '')} | {call.get('start_date', '')[:10]} | Rep: {call.get('owner_name', '')} | {call.get('duration', 0):.0f}s ---")
+        lines.append(f"\n--- {call.get('title', '')} | {call.get('start_date', '')[:10]} | Rep: {call.get('owner_name', '')} | {call.get('duration', 0):.0f}s ---")
         transcript = call.get("transcript") or ""
         if len(transcript) > 4000:
             transcript = transcript[:4000] + "\n[...truncated]"
@@ -148,61 +171,67 @@ def enrich():
             continue
 
         has_content = any(len((c.get("transcript") or "").strip()) > 50 for c in calls)
-
-        if not has_content:
-            # Still insert but without AI enrichment
-            row = {
-                "partner_front_id": p["id"],
-                "partner": p.get("partner"),
-                "partner_contact_name": p.get("partner_contact_name"),
-                "contact_name": p.get("contact_name"),
-                "contact_phone": p["contact_phone"],
-                "contact_email": p.get("contact_email"),
-                "account_name": p.get("account_name"),
-                "call_count": p.get("call_count", 0),
-                "last_call_at": p.get("last_call_at"),
-                "last_call_id": call_ids[-1] if call_ids else None,
-                "status": "unknown",
-                "next_steps": "No transcript available",
-                "updated_at": now.isoformat(),
-            }
-            supabase_query("partner_board", method="POST", body=[row])
-            skipped += 1
-            continue
-
-        prompt = build_prompt(p, calls)
-        insights = call_claude(prompt)
-
+        reps = get_all_reps(call_ids)
         last_call = calls[0] if calls else {}
-        row = {
+
+        base_row = {
             "partner_front_id": p["id"],
             "partner": p.get("partner"),
             "partner_contact_name": p.get("partner_contact_name"),
             "contact_name": p.get("contact_name"),
             "contact_phone": p["contact_phone"],
             "contact_email": p.get("contact_email"),
-            "account_name": p.get("account_name"),
+            "territory": p.get("territory"),
+            "zone": p.get("zone"),
+            "partner_role": p.get("partner_role"),
+            "team": p.get("team"),
             "call_count": p.get("call_count", 0),
             "last_call_at": p.get("last_call_at"),
             "last_call_id": last_call.get("id"),
-            "status": insights.get("status", "unknown") if insights else "error",
-            "next_steps": insights.get("next_steps", "") if insights else "AI analysis failed",
-            "key_signals": insights.get("key_signals", "") if insights else None,
-            "blockers": insights.get("blockers", "") if insights else None,
-            "sentiment": insights.get("sentiment", "") if insights else None,
-            "call_summary": insights.get("summary", "") if insights else None,
-            "enriched_at": now.isoformat(),
+            "reps": reps,
             "updated_at": now.isoformat(),
         }
-        supabase_query("partner_board", method="POST", body=[row])
+
+        if not has_content:
+            base_row.update({
+                "relationship_stage": "new" if p.get("call_count", 0) <= 1 else "developing",
+                "engagement": "Low",
+                "next_action": "No transcript available for analysis",
+            })
+            supabase_query("partner_board", method="POST", body=[base_row])
+            skipped += 1
+            continue
+
+        prompt = build_prompt(p, calls)
+        insights = call_claude(prompt)
+
+        if insights:
+            base_row.update({
+                "relationship_stage": insights.get("relationship_stage", "unknown"),
+                "engagement": insights.get("engagement", "Low"),
+                "next_action": insights.get("next_action", ""),
+                "next_action_date": insights.get("next_action_date"),
+                "pains": insights.get("pains", ""),
+                "call_summary": insights.get("summary", ""),
+                "enriched_at": now.isoformat(),
+            })
+        else:
+            base_row.update({
+                "relationship_stage": "unknown",
+                "engagement": "Low",
+                "next_action": "AI analysis failed - retry needed",
+            })
+
+        supabase_query("partner_board", method="POST", body=[base_row])
         enriched += 1
         name = p.get("partner_contact_name") or p.get("contact_name") or "?"
-        status = row["status"]
-        print(f"  [{i+1}/{len(partners)}] {name[:35]:35} | {p.get('partner','?'):10} | {status:8} | {p.get('call_count',0)} calls")
+        stage = base_row.get("relationship_stage", "?")
+        eng = base_row.get("engagement", "?")
+        print(f"  [{i+1}/{len(partners)}] {name[:30]:30} | {p.get('partner','?'):10} | {stage:12} | {eng:16} | {p.get('call_count',0)} calls")
 
         time.sleep(0.5)
 
-    print(f"\n  Done: {enriched} enriched, {skipped} skipped (no transcript)")
+    print(f"\n  Done: {enriched} enriched, {skipped} skipped")
 
 
 if __name__ == "__main__":
