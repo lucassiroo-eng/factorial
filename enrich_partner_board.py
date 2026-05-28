@@ -160,8 +160,9 @@ def get_partners_to_enrich(incremental=True):
     phones_with_new_sync = set()
     earliest_enriched = min((r.get("enriched_at") for r in board if r.get("enriched_at")), default=None)
     if earliest_enriched:
+        ts = earliest_enriched.replace("+00:00", "Z").replace("+", "%2B")
         recent_calls = supabase_query(
-            f"modjo_calls?select=contact_phone,synced_at&synced_at=gte.{earliest_enriched}"
+            f"modjo_calls?select=contact_phone,synced_at&synced_at=gte.{ts}"
         ) or []
         for c in recent_calls:
             phone = c.get("contact_phone")
