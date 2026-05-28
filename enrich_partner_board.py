@@ -157,12 +157,24 @@ def get_partners_to_enrich(incremental=True):
     board = supabase_query("partner_board?select=contact_phone,enriched_at") or []
     enriched_map = {r["contact_phone"]: r.get("enriched_at") for r in board}
 
+    phones_with_new_sync = set()
+    earliest_enriched = min((r.get("enriched_at") for r in board if r.get("enriched_at")), default=None)
+    if earliest_enriched:
+        recent_calls = supabase_query(
+            f"modjo_calls?select=contact_phone,synced_at&synced_at=gte.{earliest_enriched}"
+        ) or []
+        for c in recent_calls:
+            phone = c.get("contact_phone")
+            if not phone:
+                continue
+            enriched_at = enriched_map.get(phone)
+            if not enriched_at or c.get("synced_at", "") > enriched_at:
+                phones_with_new_sync.add(phone)
+
     result = []
     for p in partners:
         phone = p["contact_phone"]
-        enriched_at = enriched_map.get(phone)
-        last_call = p.get("last_call_at")
-        if not enriched_at or (last_call and last_call > enriched_at):
+        if phone not in enriched_map or phone in phones_with_new_sync:
             result.append(p)
     return result
 
