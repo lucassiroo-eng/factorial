@@ -120,67 +120,73 @@ def format_date(iso_str):
         return iso_str[:10]
 
 
-COUNTRY_NAMES = {
-    "re": "La Réunion", "gp": "Guadeloupe", "mq": "Martinique",
-    "gf": "Guyane", "yt": "Mayotte", "nc": "Nouvelle-Calédonie",
-    "pf": "Polynésie française", "ci": "Côte d'Ivoire", "sn": "Sénégal",
-    "cm": "Cameroun", "mg": "Madagascar", "dz": "Algérie", "tn": "Tunisie",
-    "ma": "Maroc", "ml": "Mali", "bf": "Burkina Faso", "ne": "Niger",
-    "tg": "Togo", "bj": "Bénin", "cg": "Congo", "cd": "RD Congo",
-    "ga": "Gabon", "td": "Tchad", "gn": "Guinée", "mu": "Maurice",
-    "fr": "France", "be": "Belgique", "ch": "Suisse", "lu": "Luxembourg",
-    "ca": "Canada", "ht": "Haïti", "lb": "Liban",
-    "es": "Espagne", "de": "Allemagne", "it": "Italie", "pt": "Portugal",
-    "gb": "Royaume-Uni", "us": "États-Unis", "br": "Brésil", "mx": "Mexique",
-    "ar": "Argentine", "co": "Colombie", "cl": "Chili",
+COUNTRIES = {
+    "re": ("La Réunion", "🇷🇪"), "gp": ("Guadeloupe", "🇬🇵"), "mq": ("Martinique", "🇲🇶"),
+    "gf": ("Guyane", "🇬🇫"), "yt": ("Mayotte", "🇾🇹"), "nc": ("Nouvelle-Calédonie", "🇳🇨"),
+    "pf": ("Polynésie française", "🇵🇫"), "ci": ("Côte d'Ivoire", "🇨🇮"), "sn": ("Sénégal", "🇸🇳"),
+    "cm": ("Cameroun", "🇨🇲"), "mg": ("Madagascar", "🇲🇬"), "dz": ("Algérie", "🇩🇿"),
+    "tn": ("Tunisie", "🇹🇳"), "ma": ("Maroc", "🇲🇦"), "ml": ("Mali", "🇲🇱"),
+    "bf": ("Burkina Faso", "🇧🇫"), "ne": ("Niger", "🇳🇪"), "tg": ("Togo", "🇹🇬"),
+    "bj": ("Bénin", "🇧🇯"), "cg": ("Congo", "🇨🇬"), "cd": ("RD Congo", "🇨🇩"),
+    "ga": ("Gabon", "🇬🇦"), "td": ("Tchad", "🇹🇩"), "gn": ("Guinée", "🇬🇳"),
+    "mu": ("Maurice", "🇲🇺"), "fr": ("France", "🇫🇷"), "be": ("Belgique", "🇧🇪"),
+    "ch": ("Suisse", "🇨🇭"), "lu": ("Luxembourg", "🇱🇺"), "ca": ("Canada", "🇨🇦"),
+    "ht": ("Haïti", "🇭🇹"), "lb": ("Liban", "🇱🇧"), "es": ("Espagne", "🇪🇸"),
+    "de": ("Allemagne", "🇩🇪"), "it": ("Italie", "🇮🇹"), "pt": ("Portugal", "🇵🇹"),
+    "gb": ("Royaume-Uni", "🇬🇧"), "us": ("États-Unis", "🇺🇸"), "br": ("Brésil", "🇧🇷"),
+    "mx": ("Mexique", "🇲🇽"), "ar": ("Argentine", "🇦🇷"), "co": ("Colombie", "🇨🇴"),
+    "cl": ("Chili", "🇨🇱"),
 }
 
 
 def country_label(code):
     if not code:
-        return "—"
-    return COUNTRY_NAMES.get(code.lower(), code.upper())
+        return "🌍 Inconnu"
+    entry = COUNTRIES.get(code.lower())
+    if entry:
+        return f"{entry[1]} {entry[0]}"
+    return f"🌍 {code.upper()}"
 
 
 def build_blocks(deals_with_info, yesterday_str):
+    n = len(deals_with_info)
     blocks = [
         {
             "type": "header",
             "text": {
                 "type": "plain_text",
-                "text": f"🌍 {len(deals_with_info)} deal(s) hors-France — {yesterday_str}",
+                "text": "🚨 Alerte — Nouveaux inbound leads, ready to call!!",
+            },
+        },
+        {
+            "type": "section",
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*Irving Sita* : *{n}* nouveau(x) lead(s) sont entrés le *{yesterday_str}*. À toi de jouer ! 🔥",
             },
         },
         {"type": "divider"},
     ]
 
-    by_country = {}
-    for deal, country, company in deals_with_info:
-        label = country_label(country)
-        by_country.setdefault(label, []).append((deal, company))
-
-    for ctry in sorted(by_country):
-        items = by_country[ctry]
-        lines = [f"*{ctry}* — {len(items)} deal(s)"]
-        for deal, company in items:
-            props = deal.get("properties", {})
-            deal_id = props.get("hs_object_id", deal.get("id", ""))
-            name = props.get("dealname", "Sans nom")
-            link = f"https://app.hubspot.com/contacts/{PORTAL_ID}/deal/{deal_id}"
-            entry = f"• <{link}|{name}>"
-            if company:
-                entry += f" — {company}"
-            lines.append(entry)
+    for i, (deal, country, company) in enumerate(deals_with_info, 1):
+        props = deal.get("properties", {})
+        deal_id = props.get("hs_object_id", deal.get("id", ""))
+        name = props.get("dealname", "Sans nom")
+        link = f"https://app.hubspot.com/contacts/{PORTAL_ID}/deal/{deal_id}"
+        ctry = country_label(country)
 
         blocks.append({
             "type": "section",
-            "text": {"type": "mrkdwn", "text": "\n".join(lines)},
+            "text": {
+                "type": "mrkdwn",
+                "text": f"*{i}.* {ctry}  →  <{link}|{name}>" + (f"\n     🏢 {company}" if company else ""),
+            },
         })
 
     blocks.append({"type": "divider"})
     blocks.append({
         "type": "context",
-        "elements": [{"type": "mrkdwn", "text": f"Filtres : created_by={CREATED_BY} · country ≠ FR · créés le {yesterday_str}"}],
+        "elements": [{"type": "mrkdwn", "text": "🤖 Bot Factorial · Leads hors-France · Chaque jour à 8h"}],
     })
 
     return blocks
