@@ -148,7 +148,7 @@ def country_label(code):
     return f"🌍 {code.upper()}"
 
 
-IRVING_SLACK_ID = os.environ.get("IRVING_SLACK_ID", "D0B2V2CT755")
+IRVING_SLACK_ID = os.environ.get("IRVING_SLACK_ID", "U0A8723GPNV")
 
 
 def build_blocks(deals_with_info, yesterday_str):
