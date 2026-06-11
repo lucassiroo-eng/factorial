@@ -148,6 +148,9 @@ def country_label(code):
     return f"🌍 {code.upper()}"
 
 
+IRVING_SLACK_ID = os.environ.get("IRVING_SLACK_ID", "D0B2V2CT755")
+
+
 def build_blocks(deals_with_info, yesterday_str):
     n = len(deals_with_info)
     blocks = [
@@ -162,7 +165,7 @@ def build_blocks(deals_with_info, yesterday_str):
             "type": "section",
             "text": {
                 "type": "mrkdwn",
-                "text": f"*Irving Sita* : *{n}* nouveau(x) lead(s) sont entrés le *{yesterday_str}*. À toi de jouer ! 🔥",
+                "text": f":sage: <@{IRVING_SLACK_ID}> : *{n}* nouveau(x) lead(s) sont entrés le *{yesterday_str}*. À toi de jouer ! 🔥",
             },
         },
         {"type": "divider"},
@@ -172,21 +175,24 @@ def build_blocks(deals_with_info, yesterday_str):
         props = deal.get("properties", {})
         deal_id = props.get("hs_object_id", deal.get("id", ""))
         name = props.get("dealname", "Sans nom")
+        created = format_date(props.get("createdate"))
         link = f"https://app.hubspot.com/contacts/{PORTAL_ID}/deal/{deal_id}"
         ctry = country_label(country)
 
+        line = f"*{i}.* {ctry}  ·  <{link}|{name}>"
+        if company:
+            line += f"\n      🏢 *{company}*"
+        line += f"\n      📅 {created}"
+
         blocks.append({
             "type": "section",
-            "text": {
-                "type": "mrkdwn",
-                "text": f"*{i}.* {ctry}  →  <{link}|{name}>" + (f"\n     🏢 {company}" if company else ""),
-            },
+            "text": {"type": "mrkdwn", "text": line},
         })
 
     blocks.append({"type": "divider"})
     blocks.append({
         "type": "context",
-        "elements": [{"type": "mrkdwn", "text": "🤖 Bot Factorial · Leads hors-France · Chaque jour à 8h"}],
+        "elements": [{"type": "mrkdwn", "text": ":sage: Bot Factorial · Leads hors-France · Chaque jour à 8h"}],
     })
 
     return blocks
