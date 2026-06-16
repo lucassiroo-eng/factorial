@@ -37,6 +37,19 @@ def _request(req, timeout=60, parse_json=True):
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 body = resp.read()
                 return json.loads(body) if (parse_json and body) else body
+        except urllib.error.HTTPError as e:
+            if e.code == 429:
+                wait = 60 * attempt  # rate limit: back off hard
+                print(f"    [429 rate limit] waiting {wait}s (attempt {attempt}/{MAX_RETRIES})", flush=True)
+                if attempt == MAX_RETRIES:
+                    raise
+                time.sleep(wait)
+            else:
+                raise
+            req = urllib.request.Request(
+                req.full_url, data=req.data,
+                headers=dict(req.headers), method=req.get_method()
+            )
         except (urllib.error.URLError, TimeoutError, OSError) as e:
             if attempt == MAX_RETRIES:
                 raise
@@ -278,7 +291,7 @@ def backfill_month(year, month):
 
             page += 1
             if page <= last_page:
-                time.sleep(0.15)
+                time.sleep(1.0)
 
         grand_new  += day_new
         grand_skip += day_skip
