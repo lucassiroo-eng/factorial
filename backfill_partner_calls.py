@@ -296,6 +296,7 @@ def backfill_month(year, month):
         grand_new  += day_new
         grand_skip += day_skip
         print(f"  [{day_label}] done — {day_new} new partner calls upserted", flush=True)
+        current = day_end
 
     print(f"\n{'='*60}", flush=True)
     print(f"  {label} COMPLETE", flush=True)
