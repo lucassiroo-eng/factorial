@@ -45,7 +45,7 @@ def _request(req, timeout=60, parse_json=True):
             time.sleep(wait)
             req = urllib.request.Request(
                 req.full_url, data=req.data,
-                headers=dict(req.headers), method=req.method
+                headers=dict(req.headers), method=req.get_method()
             )
 
 
