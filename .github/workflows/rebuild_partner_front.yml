@@ -1,0 +1,19 @@
+name: Rebuild Partner Front
+
+on:
+  workflow_dispatch:
+
+jobs:
+  rebuild:
+    name: "Rebuild partner_front from modjo_calls + partner_map"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Rebuild partner_front
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: python rebuild_partner_front.py
